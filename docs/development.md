@@ -65,6 +65,7 @@ CHROME=<headless shell 路径> node tools/e2e/crystal-sphere.mjs /tmp/crystal   
 CHROME=<headless shell 路径> node tools/e2e/screens.mjs /tmp/screens              # 菜单侧各界面与局内新界面截图
 CHROME=<headless shell 路径> node tools/e2e/shaders.mjs                           # Godot 着色器翻译/编译检查
 CHROME=<headless shell 路径> node tools/e2e/audio.mjs                             # 音效事件 → 采样解析检查
+CHROME=<headless shell 路径> node tools/e2e/audio-formats.mjs                     # Ogg 播放与 MP3 兼容回退检查
 CHANNEL=chrome GPU=1 node tools/e2e/perf.mjs /tmp/perf                           # 性能测量（系统 Chrome + GPU）
 ```
 
@@ -85,6 +86,7 @@ uv venv tools/.venv && uv pip install --python tools/.venv/bin/python pillow fon
 tools/.venv/bin/python tools/extract.py
 tools/.venv/bin/python tools/audio.py              # FMOD → Opus + 事件数据 assets/audio/events.json（约 5 分钟）
 tools/.venv/bin/python tools/audio_index.py
+tools/.venv/bin/python tools/audio_mp3.py          # 追加 MP3 兼容资源，供不支持 Ogg/Opus 的浏览器使用
 
 # 3. 反编译 sts2.dll 与 SmartFormat.dll → ref/decompiled、ref/smartformat
 tools/decompile.sh

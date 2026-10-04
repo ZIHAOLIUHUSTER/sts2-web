@@ -1,4 +1,5 @@
-// Web audio for FMOD events. The banks were extracted to per-sample Opus files (tools/audio.py) and their event data
+// Web audio for FMOD events. The banks were extracted to per-sample Opus files (tools/audio.py), with MP3 compatibility
+// copies (tools/audio_mp3.py), and their event data
 // decoded into assets/audio/events.json (tools/fmod_bank.py): action sheets, timelines (sync / async instruments,
 // loop regions, transition markers / regions with parameter conditions and quantization), parameter sheets, multi /
 // scatterer / nested-event / command instruments. A small timeline engine below plays them on Web Audio; an event
@@ -41,11 +42,28 @@ function applyVolumes() {
 
 // Short SFX stay decoded; music/ambience stems (minutes of PCM each) are decoded per use so they can be freed.
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
+let useMp3: boolean | undefined;
+async function loadBuffer(c: AudioContext, file: string): Promise<AudioBuffer> {
+  // Keep event/index identities unchanged; aliases must resolve before selecting the physical format.
+  let sample = aliases[file] ?? file;
+  if (sample.endsWith('.ogg') && (useMp3 ??= !document.createElement('audio').canPlayType('audio/ogg; codecs="opus"'))) sample = sample.slice(0, -4) + '.mp3';
+  const response = await fetch(BASE + sample.split('/').map(encodeURIComponent).join('/'));
+  if (!response.ok) throw new Error(`HTTP ${response.status}: ${sample}`);
+  const data = await response.arrayBuffer();
+  try { return await c.decodeAudioData(data); }
+  catch (error) {
+    // Some browsers advertise Ogg support without a working Web Audio decoder. Only decode failures
+    // switch the session to MP3; network failures do not imply an unsupported codec.
+    if (!sample.endsWith('.ogg')) throw error;
+    useMp3 = true;
+    return loadBuffer(c, file);
+  }
+}
 function buffer(file: string, keep: boolean): Promise<AudioBuffer | null> {
   let p = buffers.get(file);
   if (!p) {
     const c = ensureCtx();
-    p = !c ? Promise.resolve(null) : fetch(BASE + (aliases[file] ?? file).split('/').map(encodeURIComponent).join('/')).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).catch(() => null);
+    p = !c ? Promise.resolve(null) : loadBuffer(c, file).catch((error) => { console.warn(`[audio] Failed to load ${file}`, error); return null; });
     if (keep) buffers.set(file, p);
   }
   return p;

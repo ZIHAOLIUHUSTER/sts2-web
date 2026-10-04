@@ -13,6 +13,9 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Fixed card targeting arrows appearing away from your finger on iOS Safari, in both landscape and portrait.
 • Cards now return to your hand when released there or without a valid target; interrupted touches also cancel the drag.
 
+[gold][b]Audio[/b][/gold]
+• Music and sound effects now fall back to MP3 on browsers without Ogg/Opus support, including older iOS Safari versions.
+
 [gold][b]Feedback[/b][/gold]
 • Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.
 
@@ -29,6 +32,9 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 修复 Android 火狐浏览器中按住增益或减益图标无法显示说明的问题。
 • 修复 iOS Safari 横屏和竖屏时，卡牌瞄准箭头偏离手指位置的问题。
 • 卡牌在手牌区松开，或未选中有效目标时松开，会自动放回；触摸中断也会取消拖牌。
+
+[gold][b]音频[/b][/gold]
+• 不支持 Ogg/Opus 的浏览器会自动使用 MP3，修复旧版 iOS Safari 中音乐和部分音效无声的问题。
 
 [gold][b]问题反馈[/b][/gold]
 • 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。
