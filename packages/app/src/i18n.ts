@@ -94,6 +94,8 @@ const APP: Record<string, Record<string, string>> = {
   afterReload: { eng: 'Applies the next time the game loads.', zhs: '下次载入游戏时生效。' },
   noStorage: { eng: 'This browser blocks storage: progress lasts until the tab closes.', zhs: '浏览器禁止了本地存储：进度只保留到关闭页面为止。' },
   unofficial: { eng: 'Unofficial fan port, for learning only', zhs: '非官方正版，仅供学习使用' }, // ui/menu.tsx PortLinks
+  // ui/feedback.tsx: the feedback goes to the port, not to Mega Crit
+  feedbackPlaceholder: { eng: "Feedback here goes to this web port's author, not to Mega Crit. Up to 500 characters.", zhs: '这里的反馈会发给网页版作者，不会发给 Mega Crit。最多 500 字。' },
   // ui/disclaimer.tsx: the port's own notice in place of the game's Early Access text
   aboutHeader: { eng: 'About This Project', zhs: '关于本项目' },
   aboutBody: {

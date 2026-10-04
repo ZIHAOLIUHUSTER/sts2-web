@@ -27,6 +27,7 @@ import { Stats } from './ui/stats';
 import { RunHistory } from './ui/history';
 import { TransitionLayer, transitionView } from './ui/transition';
 import { ModalLayer } from './ui/modal';
+import { FeedbackScreen, feedbackOpen } from './ui/feedback';
 import { topBarMapPressed } from './ui/map';
 import { fit, turned } from './view';
 import './anchors.css'; // last: it adjusts what the other stylesheets place
@@ -112,6 +113,8 @@ function App() {
       <TransitionLayer />
       {ui.subscreen && <div class="viewport"><div class="stage-root subscreen-root"><ScreenView s={ui.subscreen} /></div></div>}
       {inspectActive() && <div class="viewport"><div class="stage-root settings-root"><InspectLayer /></div></div>}
+      {/* NGame.FeedbackScreen: over everything but popups */}
+      {feedbackOpen() && <div class="viewport"><div class="stage-root settings-root"><FeedbackScreen /></div></div>}
       <ModalLayer />
       <Tip />
       {ui.toast && <div class="toast" onClick={() => { ui.toast = ''; invalidate(); }}>{ui.toast}</div>}

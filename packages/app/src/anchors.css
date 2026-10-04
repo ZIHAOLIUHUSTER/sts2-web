@@ -23,7 +23,7 @@
 /* ---- full-rect leaves: backstops, backgrounds, input catchers */
 :is(.overlay-backstop, .capstone-backstop, .modal-backstop, .cs-background, .gp-bg, .inspect-backstop, .go-black, .go-summary-back,
     .combat-ui > .select-backstop, .chs-unlock-backstop, .pf-loading, .credits, .rhs-outofdate, .tl-bg, .tl-input-blocker, .tl-backstop,
-    .room-empty, .anc-hitbox, .shop-backstop, .shop-blocker, .coll-contents, .stats-grid, .settings-mask) { inset: calc(-1 * var(--oy)) calc(-1 * var(--ox)); }
+    .room-empty, .anc-hitbox, .shop-backstop, .shop-blocker, .coll-contents, .stats-grid, .settings-mask, .fb-bg) { inset: calc(-1 * var(--oy)) calc(-1 * var(--ox)); }
 /* containers that take input over the whole screen while their box stays the frame */
 :is(.capstone, .tl-slots, .tl-insp.over)::before { content: ''; position: absolute; inset: calc(-1 * var(--oy)) calc(-1 * var(--ox)); }
 /* the colour behind a scene (treasure_room.tscn ColorRect and the like), out to the viewport's edges */

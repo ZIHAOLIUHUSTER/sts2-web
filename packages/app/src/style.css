@@ -1178,3 +1178,24 @@ button { font-family: var(--font); cursor: pointer; }
 .tb-potion-flash { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; mix-blend-mode: plus-lighter; filter: brightness(2); opacity: 0;
   animation: potionFlash 1s linear both; }
 @keyframes potionFlash { 0% { scale: 1; opacity: 0; } 5.7% { opacity: 1; } 53.3% { opacity: .947; } 100% { scale: 1.779; opacity: 0; } }
+/* The feedback screen (ui/feedback.tsx): reward_panel (keep-aspect 652 × 830) under reward_banner, centred */
+.feedback-screen { position: absolute; inset: 0; }
+.fb-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .85); }
+.fb-panel { position: absolute; left: 634px; top: 140px; width: 652px; height: 830px; animation: fb-in .4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.fb-panel.leaving { translate: 0 -1000px; transition: translate .5s cubic-bezier(0.36, 0, 0.66, -0.56); }
+@keyframes fb-in { from { opacity: 0; translate: 0 50px; } }
+.fb-panel-bg { position: absolute; inset: 0; width: 652px; height: 830px; pointer-events: none; }
+.fb-banner { position: absolute; left: -54px; top: -50px; width: 760px; height: 137px; pointer-events: none; }
+.fb-banner img { position: absolute; inset: 0; width: 760px; height: 137px; }
+.fb-header { position: absolute; left: 165px; top: -24px; width: 430px; height: 137px; display: grid; place-items: center; white-space: nowrap;
+  font: 700 44px 'Kreon', var(--font); letter-spacing: 2px; color: #FFF6E2; -webkit-text-stroke: 8px rgba(74, 60, 42, .75); paint-order: stroke fill; text-shadow: 6px 5px 0 rgba(0, 0, 0, .125); }
+.fb-input { position: absolute; left: 55px; top: 120px; width: 542px; height: 480px; padding: 12px; border: none; border-radius: 3px; outline: none; resize: none;
+  background: rgba(25, 25, 25, .6); color: #DFDFDF; font: 400 24px 'Kreon', var(--font); user-select: text; }
+.fb-input::placeholder { color: rgba(223, 223, 223, .6); }
+.fb-input:focus { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .75); }
+.fb-status { position: absolute; left: 55px; top: 618px; width: 542px; height: 40px; display: grid; place-items: center; white-space: nowrap;
+  font: 400 26px 'Kreon', var(--font); letter-spacing: 1px; color: #FFF6E2; text-shadow: 3px 2px 0 rgba(0, 0, 0, .251); pointer-events: none; }
+.fb-status.success { color: #7FFF00; }
+.fb-status.failed { color: #FF5555; }
+.fb-send { position: absolute; left: 166px; top: 672px; }
+.fb-send.busy { filter: brightness(.6); pointer-events: none; }

@@ -1,8 +1,8 @@
 // NSettingsScreen (screens/settings_screen.tscn): four tabs over a scrolling panel of 64 px rows (82 px apart with their
 // dividers) — tickboxes, paginators, volume sliders, the language dropdown and buttons — with row hover tips at the
 // panel's right edge and a toast at the bottom. Values live in the game's own SettingsSave / PrefsSave.
-// Web: the window rows a browser cannot honour (display, resolution, window resizing, vsync) and feedback are left
-// out, and the Input tab (key rebinding) is disabled.
+// Web: the window rows a browser cannot honour (display, resolution, window resizing, vsync) are left out, the Input
+// tab (key rebinding) is disabled, and Feedback sends to the port's author (ui/feedback.tsx).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { G, $ } from '../game';
@@ -19,6 +19,7 @@ import { setTip } from './tooltip';
 import { NScrollbar, wheelDrag } from './scrollbar';
 import { confirmPopup } from './modal';
 import { openCredits } from './profile';
+import { openFeedback } from './feedback';
 import { view, fit } from '../view';
 
 const safe = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d; } };
@@ -87,6 +88,7 @@ function generalRows(inRun: boolean): Row[] {
     tick('LIMIT_FPS_IN_BACKGROUND_HEADER', 'LIMIT_FPS_IN_BACKGROUND_HEADER', () => settings().LimitFpsInBackground, (v) => { settings().LimitFpsInBackground = v; }, 'LIMIT_FPS_IN_BACKGROUND'),
     tick('UPLOAD_GAMEPLAY_DATA', 'UPLOAD_GAMEPLAY_DATA_HEADER', () => p().UploadData, (v) => { p().UploadData = v; }, 'GAMEPLAY_DATA'),
     tick('TEXT_EFFECTS', 'TEXT_EFFECTS', () => p().TextEffectsEnabled, (v) => { p().TextEffectsEnabled = v; }, 'TEXT_EFFECTS'),
+    { kind: 'button', label: s('SEND_FEEDBACK'), text: s('SEND_FEEDBACK_BUTTON_LABEL'), hsv: [0.82, 1.4, 0.8], outline: 'rgb(32, 66, 36)', onClick: openFeedback },
     { kind: 'button', label: s('CREDITS'), text: s('CREDITS_BUTTON_LABEL'), hsv: [0.61, 1.6, 1.3], outline: 'rgb(51, 40, 25)', onClick: openCredits },
     { ...RESET, label: s('RESET_DEFAULT'), text: s('RESET_SETTINGS_BUTTON'), onClick: () => void confirmReset('RESET_GAMEPLAY_CONFIRMATION.body', resetGeneral) },
   ];
@@ -350,7 +352,7 @@ function Dropdown({ label, options, disabled = false, onPick }: { label: string;
 }
 
 /** NSettingsButton (320 × 64): reward_skip_button (264 × 64, per-button hue) and its label; hover 1.05, press 0.95. */
-function SettingsButton({ r }: { r: Extract<Row, { kind: 'button' }> }) {
+export function SettingsButton({ r }: { r: Extract<Row, { kind: 'button' }> }) {
   const [st, setSt] = useState<'' | 'hover' | 'press'>('');
   const k = st === 'hover' ? 1.05 : st === 'press' ? 0.95 : 1;
   const t = st === 'hover' ? '.05s linear' : st === 'press' ? `.25s ${EXPO_OUT}` : `.5s ${EXPO_OUT}`;

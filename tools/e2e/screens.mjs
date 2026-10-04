@@ -17,7 +17,7 @@ const go = (screen) => page.evaluate((s) => { window.ui.screen = s; window.inval
 // timeline, daily, custom and profile are main-menu submenus (credits: a modal from settings)
 const SUBMENUS = ['timeline', 'daily', 'custom', 'profile'];
 const sub = (menu) => page.evaluate((m) => { window.ui.screen = 'menu'; window.ui.menuStack = [m]; window.invalidate(); }, menu);
-const credits = async () => { await sub('settings'); await page.waitForTimeout(500); await page.locator('.st-button').first().click(); };
+const credits = async () => { await sub('settings'); await page.waitForTimeout(500); await page.locator('.st-button').nth(1).click(); }; // after Feedback
 
 await page.goto(url);
 await page.waitForFunction(() => window.ui?.screen === 'menu');
