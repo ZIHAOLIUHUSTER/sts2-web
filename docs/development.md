@@ -66,6 +66,7 @@ CHROME=<headless shell 路径> node tools/e2e/screens.mjs /tmp/screens          
 CHROME=<headless shell 路径> node tools/e2e/shaders.mjs                           # Godot 着色器翻译/编译检查
 CHROME=<headless shell 路径> node tools/e2e/audio.mjs                             # 音效事件 → 采样解析检查
 CHROME=<headless shell 路径> node tools/e2e/audio-formats.mjs                     # Ogg 播放与 MP3 兼容回退检查
+CHROME=<headless shell 路径> node tools/e2e/audio-retry.mjs                       # 音频有限重试、失败后恢复检查（仅开发服务器）
 CHANNEL=chrome GPU=1 node tools/e2e/perf.mjs /tmp/perf                           # 性能测量（系统 Chrome + GPU）
 ```
 

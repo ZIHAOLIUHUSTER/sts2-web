@@ -16,6 +16,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]Audio[/b][/gold]
 • Music and sound effects now fall back to MP3 on browsers without Ogg/Opus support, including older iOS Safari versions.
+• Audio loading now retries brief network failures; failed samples can load again when played later without refreshing the page.
 
 [gold][b]Feedback[/b][/gold]
 • Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.
@@ -37,6 +38,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]音频[/b][/gold]
 • 不支持 Ogg/Opus 的浏览器会自动使用 MP3，修复旧版 iOS Safari 中音乐和部分音效无声的问题。
+• 音频加载遇到短暂网络故障时会自动重试；加载失败的音频在后续播放时可重新加载，无需刷新页面。
 
 [gold][b]问题反馈[/b][/gold]
 • 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。

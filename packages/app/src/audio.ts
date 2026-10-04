@@ -43,13 +43,26 @@ function applyVolumes() {
 // Short SFX stay decoded; music/ambience stems (minutes of PCM each) are decoded per use so they can be freed.
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 let useMp3: boolean | undefined;
+async function fetchAudio(sample: string): Promise<ArrayBuffer> {
+  const url = BASE + sample.split('/').map(encodeURIComponent).join('/');
+  for (let attempt = 0; ; attempt++) {
+    let response: Response | undefined;
+    try {
+      response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${sample}`);
+      return await response.arrayBuffer();
+    } catch (error) {
+      // Two retries for transient fetch/body-read failures only; decoding has its own codec fallback.
+      if (attempt === 2 || (response && !response.ok && response.status < 500 && ![408, 429].includes(response.status))) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    }
+  }
+}
 async function loadBuffer(c: AudioContext, file: string): Promise<AudioBuffer> {
   // Keep event/index identities unchanged; aliases must resolve before selecting the physical format.
   let sample = aliases[file] ?? file;
   if (sample.endsWith('.ogg') && (useMp3 ??= !document.createElement('audio').canPlayType('audio/ogg; codecs="opus"'))) sample = sample.slice(0, -4) + '.mp3';
-  const response = await fetch(BASE + sample.split('/').map(encodeURIComponent).join('/'));
-  if (!response.ok) throw new Error(`HTTP ${response.status}: ${sample}`);
-  const data = await response.arrayBuffer();
+  const data = await fetchAudio(sample);
   try { return await c.decodeAudioData(data); }
   catch (error) {
     // Some browsers advertise Ogg support without a working Web Audio decoder. Only decode failures
@@ -63,7 +76,12 @@ function buffer(file: string, keep: boolean): Promise<AudioBuffer | null> {
   let p = buffers.get(file);
   if (!p) {
     const c = ensureCtx();
-    p = !c ? Promise.resolve(null) : loadBuffer(c, file).catch((error) => { console.warn(`[audio] Failed to load ${file}`, error); return null; });
+    if (!c) return Promise.resolve(null);
+    p = loadBuffer(c, file).catch((error) => {
+      if (buffers.get(file) === p) buffers.delete(file); // a later playback can try again
+      console.warn(`[audio] Failed to load ${file}`, error);
+      return null;
+    });
     if (keep) buffers.set(file, p);
   }
   return p;
@@ -297,7 +315,8 @@ function nestedVoice(host: Instance, key: string, t: number, out: AudioNode): Vo
 
 function prefetch(host: Instance, i: Ins | null) {
   if (!i) return;
-  if (i.f) { host.files.add(i.f); buffer(i.f, true); }
+  // Do not restart an exhausted load on every scheduler tick. Playback can still request it again.
+  if (i.f && !host.files.has(i.f)) { host.files.add(i.f); buffer(i.f, true); }
   for (const x of i.pl ?? []) prefetch(host, x);
 }
 
