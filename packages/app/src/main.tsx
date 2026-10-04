@@ -46,8 +46,21 @@ window.addEventListener('resize', () => { fit(); invalidate(); });
   def('movementX', function () { return turned ? my.call(this) : mx.call(this); });
   def('movementY', function () { return turned ? -mx.call(this) : my.call(this); });
   const rect = Element.prototype.getBoundingClientRect;
+  // Some WebKit versions omit CSS zoom from DOM rects, but pointer coordinates still use viewport pixels.
+  // Detect the behavior rather than the browser: newer WebKit and other engines already include zoom.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;width:1px;height:1px;zoom:2;visibility:hidden';
+  document.body.append(probe);
+  const unscaledZoomRects = getComputedStyle(probe).zoom === '2' && rect.call(probe).width === 1;
+  probe.remove();
   Element.prototype.getBoundingClientRect = function () {
-    const r = rect.call(this);
+    let r = rect.call(this);
+    const stage = unscaledZoomRects ? this.closest('.stage-root') : null;
+    if (stage) {
+      const zoom = Number(getComputedStyle(stage).zoom);
+      r = new DOMRect(r.x * zoom, r.y * zoom, r.width * zoom, r.height * zoom);
+    }
+    // Normalize zoom before rotating back, since the rotation offset is in viewport pixels too.
     return turned ? new DOMRect(r.top, window.innerWidth - r.right, r.height, r.width) : r;
   };
 }
