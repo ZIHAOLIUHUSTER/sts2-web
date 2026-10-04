@@ -12,7 +12,10 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Cards now return to your hand when released there or without a valid target; interrupted touches also cancel the drag.
 
 [gold][b]Feedback[/b][/gold]
-• Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.`,
+• Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.
+
+[gold][b]Performance[/b][/gold]
+• Reduced the particle count in the fight against The Insatiable for smoother play.`,
     zhs: `[gold][b]显示与布局[/b][/gold]
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
 • 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。
@@ -23,7 +26,10 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 卡牌在手牌区松开，或未选中有效目标时松开，会自动放回；触摸中断也会取消拖牌。
 
 [gold][b]问题反馈[/b][/gold]
-• 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。`,
+• 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。
+
+[gold][b]性能[/b][/gold]
+• 减少与「无厌沙虫」战斗时的粒子数量，让画面更流畅。`,
   },
   {
     date: '2026_10_03',
