@@ -34,7 +34,7 @@ const safe = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d; }
  * and location from the request itself; the seed is there only in a run.
  */
 async function send(text: string): Promise<boolean> {
-  if (!text) return true; // SendFeedback: nothing to send, success anyway
+  if (!text.trim()) return true; // SendFeedback: nothing to send, success anyway
   const payload = {
     content: text,
     build: __BUILD_ID__,
