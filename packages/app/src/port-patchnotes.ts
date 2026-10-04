@@ -7,12 +7,18 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Menus, combat, maps and other screens now adapt to the selected aspect ratio, making better use of wide and tall displays.
 • Removed the blue touch highlight from the main menu's Feedback and GitHub links.
 
+[gold][b]Touch controls[/b][/gold]
+• Fixed buff descriptions disappearing while holding a status icon.
+
 [gold][b]Feedback[/b][/gold]
 • Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.`,
     zhs: `[gold][b]显示与布局[/b][/gold]
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
 • 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。
 • 移除主菜单“问题反馈”和 GitHub 入口按住时的蓝色高亮。
+
+[gold][b]触屏操作[/b][/gold]
+• 修复按住状态图标时，增益或减益效果说明消失的问题。
 
 [gold][b]问题反馈[/b][/gold]
 • 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。`,

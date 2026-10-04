@@ -104,7 +104,8 @@ export function pinTips(list: TipData[] | null, at?: Placement) {
   markSeen(shown);
   invalidate();
 }
-window.addEventListener('pointerdown', () => { if (tips.length) setTip(null); }, true);
+// Touch enters immediately before pressing: keep that tip visible until the finger leaves.
+window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch' && tips.length) setTip(null); }, true);
 
 // ------------------------------------------------------------------ layout (NHoverTipSet placement code)
 interface Box { x: number; y: number; w: number; h: number }
