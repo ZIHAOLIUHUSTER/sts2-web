@@ -9,6 +9,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]Touch controls[/b][/gold]
 • Fixed buff descriptions disappearing while holding a status icon.
+• Fixed buff icons not showing descriptions when held in Firefox for Android.
 • Cards now return to your hand when released there or without a valid target; interrupted touches also cancel the drag.
 
 [gold][b]Feedback[/b][/gold]
@@ -23,6 +24,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]触屏操作[/b][/gold]
 • 修复按住状态图标时，增益或减益效果说明消失的问题。
+• 修复 Android 火狐浏览器中按住增益或减益图标无法显示说明的问题。
 • 卡牌在手牌区松开，或未选中有效目标时松开，会自动放回；触摸中断也会取消拖牌。
 
 [gold][b]问题反馈[/b][/gold]

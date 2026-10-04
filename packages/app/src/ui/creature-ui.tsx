@@ -298,9 +298,12 @@ function Power({ p, node, x, y }: { p: any; node: CreatureView | null; x: number
   if (!tipFn && node) powerTipFns.set(p, (tipFn = () => node.ShowHoverTips(p.HoverTips)));
   // a freed NPower no longer refreshes its tips
   useEffect(() => () => { if (tipFn) node?.tipSubs.delete(tipFn); }, []);
+  const showTips = () => { if (!node || !tipFn) return; node.ShowHoverTips(p.HoverTips); node.tipSubs.add(tipFn); };
   return (
     <div class="power" style={{ left: `${x}px`, top: `${y}px` }}
-      onPointerEnter={() => { if (!node || !tipFn) return; node.ShowHoverTips(p.HoverTips); node.tipSubs.add(tipFn); }}
+      onPointerEnter={showTips}
+      // Firefox Android needs a press handler to keep touch targeting on the icon instead of the canvas behind it.
+      onPointerDown={(e) => { if (e.pointerType === 'touch') showTips(); }}
       onPointerLeave={() => { if (!node || !tipFn) return; node.HideHoverTips(); node.tipSubs.delete(tipFn); }}>
       <div class={'power-icon' + (pulse ? ' pulse' : '')} style={{ ...frameStyle(atlasFrame(safe(() => p.IconPath, '')), 40, 40), filter: pulse ? pulseFilter() : undefined }} />
       {flashing && <img key={flashAt} class="power-flash" src={imageUrl(safe(() => p.ResolvedBigIconPath, '')) ?? ''} style={{ filter: flashFilter(2) }} />}
