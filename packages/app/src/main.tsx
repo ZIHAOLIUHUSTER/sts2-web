@@ -8,6 +8,7 @@ import { preloadLocalization, addListedFiles, appText } from './i18n';
 import { sceneIndex } from './render/scene';
 import { installFilters } from './filters';
 import { installBridge } from './bridge';
+import { initAnalytics } from './analytics';
 import './render/vfx-cards';
 import './render/vfx-attacks';
 import './render/vfx-misc';
@@ -218,14 +219,7 @@ const swClaimed = !import.meta.env.PROD || !('serviceWorker' in navigator) ? nul
     if (current) done(); else setTimeout(done, 3000);
   });
 })();
-// Tianji analytics on deployed hosts only: dev, preview and the e2e runs all serve from 127.0.0.1
-if (!['127.0.0.1', 'localhost'].includes(location.hostname)) {
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://app.tianji.dev/tracker.js';
-  s.dataset.websiteId = 'cmupjzwk6wm425xc7qmgk89dy';
-  document.head.append(s);
-}
+initAnalytics();
 function tryOr<T>(f: () => T, d: T) { try { return f() ?? d; } catch { return d; } }
 function safeGet(k: string) { try { return localStorage.getItem(k); } catch { return null; } }
 boot().catch((e) => {

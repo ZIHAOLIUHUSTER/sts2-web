@@ -29,6 +29,9 @@ importers:
       preact:
         specifier: ^10.26.0
         version: 10.29.8
+      tianji-client-sdk:
+        specifier: ^1.5.2
+        version: 1.5.2
     devDependencies:
       typescript:
         specifier: ^5.9.0
@@ -498,6 +501,9 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
+  load-script@2.0.0:
+    resolution: {integrity: sha512-km6cyoPW4rM22JMGb+SHUKPMZVDpUaMpMAKrv8UHWllIxc/qjgMGHD91nY+5hM+/NFs310OZ2pqQeJKs7HqWPA==}
+
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
 
@@ -574,6 +580,9 @@ packages:
 
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
+
+  tianji-client-sdk@1.5.2:
+    resolution: {integrity: sha512-r25pj/UW/s0bh6IUpoL5WO0hGAvZg0I6jrFVmmo6K/III2YspYR4H3e2dnOSVFdSLjvngKjlGUsZzjsd5/bTKQ==}
 
   tiny-lru@11.4.7:
     resolution: {integrity: sha512-w/Te7uMUVeH0CR8vZIjr+XiN41V+30lkDdK+NRIDCUYKKuL9VcmaUEmaPISuwGhLlrTGh5yu18lENtR9axSxYw==}
@@ -997,6 +1006,8 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
+  load-script@2.0.0: {}
+
   loupe@3.2.1: {}
 
   magic-string@0.30.21:
@@ -1089,6 +1100,10 @@ snapshots:
   strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
+
+  tianji-client-sdk@1.5.2:
+    dependencies:
+      load-script: 2.0.0
 
   tiny-lru@11.4.7: {}
 

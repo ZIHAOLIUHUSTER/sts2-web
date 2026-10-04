@@ -12,7 +12,8 @@
     "@sts2/core": "workspace:*",
     "fastnoise-lite": "^1.1.1",
     "pixi.js": "^8.6.0",
-    "preact": "^10.26.0"
+    "preact": "^10.26.0",
+    "tianji-client-sdk": "^1.5.2"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
