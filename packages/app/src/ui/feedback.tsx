@@ -28,13 +28,24 @@ export function openFeedback() {
 }
 function close() { open = false; draft.closedAt = Date.now(); invalidate(); }
 
-/** The survey's one field carries the description and the version, language and browser. */
+const safe = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d; } };
+/**
+ * One survey field each (Tianji stores keys it has no field for too). Tianji records the browser, OS, browser language
+ * and location from the request itself; the seed is there only in a run.
+ */
 async function send(text: string): Promise<boolean> {
   if (!text) return true; // SendFeedback: nothing to send, success anyway
-  const lang = (() => { try { return G.LocManager.Instance.Language; } catch { return '?'; } })();
-  const meta = [`v0.98.3 build ${__BUILD_ID__}`, lang, navigator.userAgent].join(' · ');
+  const payload = {
+    content: text,
+    build: __BUILD_ID__,
+    version: 'v0.98.3',
+    gameLanguage: safe(() => G.LocManager.Instance.Language, ''),
+    viewport: `${innerWidth}x${innerHeight}`,
+    seed: safe(() => G.RunManager.Instance.State?.Rng.StringSeed ?? '', ''),
+    userAgent: navigator.userAgent,
+  };
   try {
-    const r = await fetch(SURVEY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { content: `${text}\n\n${meta}` } }) });
+    const r = await fetch(SURVEY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload }) });
     return r.ok;
   } catch { return false; }
 }
