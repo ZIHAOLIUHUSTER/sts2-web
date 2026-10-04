@@ -87,7 +87,7 @@ export function FeedbackScreen() {
           <SettingsButton r={{ kind: 'button', label: '', text: s('FEEDBACK_SEND_BUTTON_LABEL'), hsv: [0.82, 1.4, 0.8], outline: 'rgb(32, 66, 36)', onClick: () => void pressSend() }} />
         </div>
       </div>
-      <BackButton enabled={!leaving} onClick={close} />
+      <BackButton enabled onClick={close} />
     </div>
   );
 }
