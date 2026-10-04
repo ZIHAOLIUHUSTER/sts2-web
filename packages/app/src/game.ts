@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as Core from '@sts2/core';
 export const G: any = Core;
+export { GAME_VERSION } from '@sts2/core';
 export const $: any = Core.$;
 export const N = (path: string): any => $.ext('MegaCrit.Sts2.Core.Nodes.' + path);
 export const enumName = (e: any, v: number) => $.enumStr(e, v);

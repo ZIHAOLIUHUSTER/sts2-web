@@ -3,7 +3,7 @@
 // (singleplayer, character select, settings, compendium) show over the BlurBackstop while the logo fades.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { G, $, list } from '../game';
+import { G, $, list, GAME_VERSION } from '../game';
 import { playMusic, playOneShot } from '../audio';
 import { ui, invalidate, type MenuSubmenu } from '../store';
 import { imageUrl, frameByName, frameStyle } from '../assets';
@@ -89,7 +89,7 @@ export function MainMenu() {
       {top === 'custom' && <CustomRun />}
       {top === 'profile' && <Profiles />}
       {/* NDebugInfoLabelManager's ReleaseInfo: version and today's date */}
-      <div class="mm-release">{'v0.98.3\n' + netDate('yyyy-MM-dd', new Date())}</div>
+      <div class="mm-release">{`v${GAME_VERSION}\n` + netDate('yyyy-MM-dd', new Date())}</div>
     </div>
   );
 }

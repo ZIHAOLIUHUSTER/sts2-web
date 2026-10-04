@@ -5,7 +5,7 @@
 // The feedback goes to the port's author (Tianji survey), not Mega Crit, and the placeholder says so; no screenshot or
 // logs; the text is kept when sending fails. The main menu has an entry of its own (ui/menu.tsx PortLinks).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { G } from '../game';
+import { G, GAME_VERSION } from '../game';
 import { invalidate } from '../store';
 import { playOneShot } from '../audio';
 import { imageUrl } from '../assets';
@@ -38,7 +38,7 @@ async function send(text: string): Promise<boolean> {
   const payload = {
     content: text,
     build: __BUILD_ID__,
-    version: 'v0.98.3',
+    version: `v${GAME_VERSION}`,
     gameLanguage: safe(() => G.LocManager.Instance.Language, ''),
     viewport: `${innerWidth}x${innerHeight}`,
     seed: safe(() => G.RunManager.Instance.State?.Rng.StringSeed ?? '', ''),

@@ -4,6 +4,7 @@ import { provide, ext, str, fmt, fmtNum, cs, compare, compareStr, compareOrdinal
 import { Task, TaskCompletionSource, CancellationToken, CancellationTokenSource } from './task';
 import { Dictionary, HashSet, Queue, Stack, LinkedList } from './collections';
 import { Enumerable } from './linq';
+import { GAME_VERSION } from '../version';
 
 function def(proto: any, name: string, value: any) {
   Object.defineProperty(proto, name, { value, configurable: true, writable: true, enumerable: false });
@@ -712,7 +713,7 @@ provide('System.Reflection.CustomAttributeExtensions', {
   IsDefined: (m: any, t: any) => (typeof m?.IsDefined === 'function' ? m.IsDefined(t) : false),
 });
 provide('System.AppDomain', { CurrentDomain: { GetAssemblies: () => [], AssemblyResolve: null, BaseDirectory: '/', FriendlyName: 'sts2' } });
-provide('System.Reflection.Assembly', { GetExecutingAssembly: () => ({ GetName: () => ({ Name: 'sts2', Version: { ToString: () => '0.98.3' } }), GetTypes: () => [], Location: '/' }), GetEntryAssembly: () => null, LoadFrom: () => null });
+provide('System.Reflection.Assembly', { GetExecutingAssembly: () => ({ GetName: () => ({ Name: 'sts2', Version: { ToString: () => GAME_VERSION } }), GetTypes: () => [], Location: '/' }), GetEntryAssembly: () => null, LoadFrom: () => null });
 
 // ------------------------------------------------------------------ Regex (.NET pattern dialect is close to JS for the patterns the game uses)
 const RX_IGNORECASE = 1, RX_MULTILINE = 2, RX_EXPLICITCAPTURE = 4, RX_SINGLELINE = 16, RX_IGNOREWS = 32;

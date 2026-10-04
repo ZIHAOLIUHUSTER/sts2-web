@@ -162,9 +162,9 @@ node tools/save-enums.mjs > packages/core/test/fixtures/saves-v<新>/enums.json
 | 着色器、音频 | `URL=http://127.0.0.1:47173/ node tools/e2e/shaders.mjs`，`audio.mjs` 同样 | 无失败项 |
 | 本地化 | 核心测试里的 `locale.test.ts`、`text.test.ts`；`LANG_UI=zhs` 跑一局 `play.mjs` | 无缺键、无方块字 |
 | 性能 | `CHANNEL=chrome GPU=1 node tools/e2e/perf.mjs <输出> > <临时>/perf-after.log` 对比 `perf-before.log` | 无明显退化 |
-| 版本号 | `grep -rn "<旧>" README.md AGENTS.md docs packages/app/src packages/core/src/rt` | 只剩历史记录里的 |
+| 版本号 | `grep -rn "<旧>" README.md AGENTS.md docs packages/app/src packages/core/src/rt packages/core/src/version.ts` | 只剩历史记录里的 |
 
-版本号目前写在：`README.md`、`AGENTS.md`、`docs/sts2-web-port-plan.md`、`packages/core/src/rt/bcl.ts`（程序集版本）、`packages/app/src/i18n.ts`、`packages/app/src/ui/menu.tsx`。
+版本号目前写在：`README.md`、`AGENTS.md`、`docs/sts2-web-port-plan.md`；代码里只有 `packages/core/src/version.ts` 的 `GAME_VERSION`（`rt/bcl.ts` 的程序集版本、主菜单版本号、关于本项目和反馈都引用它）。`packages/app/src/port-patchnotes.ts` 里的是历史记录，不改。
 
 还没有脚本覆盖的一项：把旧样本写进浏览器的 IndexedDB 再点"继续"。补一个脚本，或手工做一次。
 
