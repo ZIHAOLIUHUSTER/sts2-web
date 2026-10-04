@@ -89,6 +89,7 @@ export function t(k: keyof typeof UI): string {
 
 /** App-only strings the game has no text for (it uses visuals instead); English fallback. */
 const APP: Record<string, Record<string, string>> = {
+  portPatchNotesHeader: { eng: 'Web Port Updates', zhs: '移植版更新' },
   storageFull: { eng: 'Browser storage is full: progress could not be saved.', zhs: '浏览器存储已满，进度未能保存。' },
   afterReload: { eng: 'Applies the next time the game loads.', zhs: '下次载入游戏时生效。' },
   noStorage: { eng: 'This browser blocks storage: progress lasts until the tab closes.', zhs: '浏览器禁止了本地存储：进度只保留到关闭页面为止。' },

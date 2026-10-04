@@ -1,8 +1,11 @@
 // NMainMenu's PatchNotesButton (top right) and NPatchNotesScreen (screens/patch_notes_screen.tscn): not a submenu but a
-// layer of the main menu over its blur backstop. The notes (res://localization/eng/patch_notes/*.md, English only) are
-// BBCode shown verbatim, newest first; the arrows page through older / newer ones.
+// layer of the main menu over its blur backstop. Localized web port notes precede the original game's English-only
+// BBCode notes, which are shown verbatim, newest first; the arrows page through older / newer ones.
 import { useEffect, useState } from 'preact/hooks';
 import { A, imageUrl } from '../assets';
+import { G } from '../game';
+import { appText } from '../i18n';
+import { portPatchNotes } from '../port-patchnotes';
 import { invalidate } from '../store';
 import { playOneShot } from '../audio';
 import { hsvFilter } from '../filters';
@@ -17,7 +20,8 @@ const pn = { open: false, shown: false, index: 0, gen: 0, paths: null as string[
 /** DirAccess.GetFilesAt (alphabetical, i.e. by date) reversed: index 0 is the newest. */
 const paths = async () => (pn.paths ??= ((await (await fetch(A + 'patch_notes/index.json')).json()) as string[]).reverse());
 async function load(i: number) {
-  const name = (await paths())[i];
+  invalidate(); // port notes are already available, even while the original index is loading
+  const name = (await paths())[i - portPatchNotes.length];
   if (name && !pn.text.has(name)) pn.text.set(name, await (await fetch(A + 'patch_notes/' + name)).text().catch(() => ''));
   invalidate();
 }
@@ -40,17 +44,17 @@ function close() {
   invalidate();
 }
 function page(d: number) {
-  const n = pn.paths?.length ?? 0;
+  const n = portPatchNotes.length + (pn.paths?.length ?? 0);
   const next = pn.index + d;
   if (next < 0 || next >= n) return;
   pn.index = next;
   void load(next);
 }
-/** "yyyy_MM_d" (invariant) → "MMMM d, yyyy" (invariant English). */
-function dateOf(name: string) {
+/** Original dates stay in English; web port dates follow their content's language. */
+function dateOf(name: string, locale = 'en-US') {
   const m = /^(\d{4})_(\d{2})_(\d{1,2})$/.exec(name.split('.')[0]);
   if (!m) return '';
-  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])));
+  return new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])));
 }
 
 export function PatchNotes() {
@@ -79,9 +83,12 @@ function PatchNotesIcon({ class: cls, onClick }: { class: string; onClick: () =>
 
 function PatchNotesScreen() {
   const [first] = useState(() => pn.gen === 1);
-  const n = pn.paths?.length ?? 0;
-  const name = pn.paths?.[pn.index] ?? '';
-  const text = pn.text.get(name);
+  const n = portPatchNotes.length + (pn.paths?.length ?? 0);
+  const portNote = portPatchNotes[pn.index];
+  const lang = G.LocManager.Instance.Language === 'zhs' ? 'zhs' : 'eng';
+  const name = portNote ? 'port/' + portNote.date : pn.paths?.[pn.index - portPatchNotes.length] ?? '';
+  const text = portNote ? `[blue][b]${appText('portPatchNotesHeader')}[/b][/blue]\n\n${portNote[lang]}` : pn.text.get(name);
+  const date = portNote ? dateOf(portNote.date, lang === 'zhs' ? 'zh-CN' : 'en-US') : dateOf(name);
   // hotkeys (released): ← older, → newer, Esc closes
   useEffect(() => {
     const up = (e: KeyboardEvent) => {
@@ -99,7 +106,7 @@ function PatchNotesScreen() {
         <ScrollArea key={name} rect={[199 - view.ox, 1 - view.oy, 1520 + 2 * view.ox, 1080 + 2 * view.oy]} bar={[1819 + view.ox, 131 - view.oy, 50, 820 + 2 * view.oy]}>
           <div class="pn-content">
             <div class="pn-text">
-              <div class="pn-date">{dateOf(name)}</div>
+              <div class="pn-date">{date}</div>
               <RichText text={text} />
             </div>
           </div>
