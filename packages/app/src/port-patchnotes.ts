@@ -16,6 +16,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.
 
 [gold][b]Performance[/b][/gold]
+• Reduced interface rendering memory use on small screens, fixing iPhone Safari reloading when starting a run.
 • Reduced the particle count in the fight against The Insatiable for smoother play.`,
     zhs: `[gold][b]显示与布局[/b][/gold]
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
@@ -31,6 +32,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。
 
 [gold][b]性能[/b][/gold]
+• 降低小屏幕上的界面绘制内存占用，修复 iPhone Safari 开局时反复重载的问题。
 • 减少与「无厌沙虫」战斗时的粒子数量，让画面更流畅。`,
   },
   {
