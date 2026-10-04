@@ -5,7 +5,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
     eng: `[gold][b]Display and layout[/b][/gold]
 • Added an aspect ratio setting: Auto, 4:3, 16:10, 16:9 and 21:9.
 • Menus, combat, maps and other screens now adapt to the selected aspect ratio, making better use of wide and tall displays.
-• Removed the blue touch highlight from the main menu's Feedback and GitHub links.
+• Removed the browser's blue touch highlight throughout the app.
 
 [gold][b]Touch controls[/b][/gold]
 • Fixed buff descriptions disappearing while holding a status icon.
@@ -16,7 +16,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
     zhs: `[gold][b]显示与布局[/b][/gold]
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
 • 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。
-• 移除主菜单“问题反馈”和 GitHub 入口按住时的蓝色高亮。
+• 移除整个应用中按住按钮等控件时浏览器自带的蓝色触摸高亮。
 
 [gold][b]触屏操作[/b][/gold]
 • 修复按住状态图标时，增益或减益效果说明消失的问题。
