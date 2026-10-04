@@ -98,10 +98,10 @@ export function CardLayer({ root, hand, skip }: { root: any; hand?: HandView | n
             } : h instanceof SelectedHolderView ? () => h.focus(true) : undefined}
             onPointerLeave={h ? () => { h.focus(false); setTip(null); } : undefined}
             onPointerDown={h && hand ? (ev) => {
-              if (ev.button !== 0) return;
+              if (ev.button !== 0 || !ev.isPrimary) return;
               setTip(null);
               if (h instanceof SelectedHolderView) { playOneShot('event:/sfx/ui/clicks/ui_click'); h.container.DeselectHolder(h); }
-              else hand.press(h);
+              else hand.press(h, ev.pointerType === 'touch');
             } : undefined}>
             <img class="holder-flash" src={imageUrl('images/packed/card_template/card_flash.png') ?? ''} style={{ display: 'none' }} />
             <div class="card-body">
@@ -160,23 +160,34 @@ export function usePointer(hand: () => HandView | null) {
   useEffect(() => {
     const root = document.querySelector('.stage-root') as HTMLElement | null;
     const move = (e: PointerEvent) => {
+      if (!e.isPrimary) return;
       const r = (root ?? document.body).getBoundingClientRect();
       mouse.x = ((e.clientX - r.left) / r.width) * 1920;
       mouse.y = ((e.clientY - r.top) / r.height) * 1080;
     };
     const button = (down: boolean) => (e: PointerEvent) => {
+      if (!e.isPrimary) return;
       move(e);
       hand()?.currentPlay?.button(e.button, down);
       targetManager.button(e.button, down);
     };
+    const cancel = () => {
+      hand()?.currentPlay?.CancelPlayCard();
+      targetManager.CancelTargeting();
+    };
+    const cancelled = (e: PointerEvent) => { if (e.isPrimary) cancel(); };
     const bd = button(true), bu = button(false);
     window.addEventListener('pointermove', move, true);
     window.addEventListener('pointerdown', bd, true);
     window.addEventListener('pointerup', bu, true);
+    window.addEventListener('pointercancel', cancelled, true);
+    window.addEventListener('blur', cancel);
     return () => {
       window.removeEventListener('pointermove', move, true);
       window.removeEventListener('pointerdown', bd, true);
       window.removeEventListener('pointerup', bu, true);
+      window.removeEventListener('pointercancel', cancelled, true);
+      window.removeEventListener('blur', cancel);
     };
   }, []);
 }

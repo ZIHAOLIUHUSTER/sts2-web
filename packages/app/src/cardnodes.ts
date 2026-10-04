@@ -571,7 +571,7 @@ export class HandView extends Web(NPlayerHand) {
     if (off) this.CancelAllCardPlay();
   }
   /** OnHolderPressed: while peeking the peek button wiggles; Mode.Play → StartCardPlay; the selection modes pick the card. */
-  press(h: HolderView) {
+  press(h: HolderView, touch = false) {
     if (this.select.peeking) { this.select.wiggle++; invalidate(); return; }
     if (this.IsInCardSelection) {
       if (!h.CardNode || !G.CombatManager.Instance.IsInProgress || safe(() => N('Screens.Overlays.NOverlayStack').Instance.ScreenCount > 0, false)) return;
@@ -580,7 +580,7 @@ export class HandView extends Web(NPlayerHand) {
     }
     if (!h.CardNode || !G.CombatManager.Instance.IsInProgress || this.currentPlay) return;
     if (!this.cardActionsAllowed()) return;
-    this.StartCardPlay(h, false);
+    this.StartCardPlay(h, false, touch);
   }
   /**
    * NPlayerHand._UnhandledInput selectCard1–10: the dragged card keeps its number; in play mode a card already being
@@ -601,12 +601,12 @@ export class HandView extends Web(NPlayerHand) {
       if (this.mode === 2) this.SelectCardInSimpleMode(h); else this.SelectCardInUpgradeMode(h);
     }
   }
-  private StartCardPlay(h: HolderView, viaShortcut: boolean) {
+  private StartCardPlay(h: HolderView, viaShortcut: boolean, touch = false) {
     this.draggedIndex = h.GetIndex();
     this.awaiting.set(h, this.draggedIndex);
     h.Reparent(this);
     h.BeginDrag();
-    this.currentPlay = new MouseCardPlay(h, this, viaShortcut);
+    this.currentPlay = new MouseCardPlay(h, this, viaShortcut, touch);
     safe(() => G.RunManager.Instance.HoveredModelTracker.OnLocalCardSelected(h.CardNode!.Model), null);
     this.currentPlay.Start();
     this.RefreshLayout();
@@ -1186,7 +1186,7 @@ export class MouseCardPlay {
   private leftDown: boolean;
   private dragStartY = 0;
   private done = false;
-  constructor(public holder: HolderView, private hand: HandView, private skipDrag: boolean) { this.leftDown = !skipDrag; }
+  constructor(public holder: HolderView, private hand: HandView, private skipDrag: boolean, private touch = false) { this.leftDown = !skipDrag; }
   get cardNode() { return this.holder.CardNode; }
   get card() { return this.cardNode?.Model ?? null; }
   private get playZone() {
@@ -1198,7 +1198,14 @@ export class MouseCardPlay {
   private inCancelZone() { return mouse.y > fracY(0.95); }
   /** Left button state and right-click cancel (NMouseCardPlay._Input). */
   button(btn: number, down: boolean) {
-    if (btn === 0) this.leftDown = down;
+    if (btn === 0) {
+      this.leftDown = down;
+      if (this.touch && !down) {
+        const T = G.TargetType, single = this.card?.TargetType === T.AnyEnemy || this.card?.TargetType === T.AnyAlly;
+        // A touch drag ends on release; it must not fall back to mouse click-to-target mode.
+        if (!this.inPlayZone() || (single && !targetManager.hovered)) this.CancelPlayCard();
+      }
+    }
     else if (btn === 2 && down) this.CancelPlayCard();
   }
   Start() { void this.run(); }
@@ -1219,7 +1226,7 @@ export class MouseCardPlay {
       return;
     }
     this.cardNode.CardHighlight.AnimFlash();
-    const mode = this.skipDrag ? TM.ClickMouseToTarget : this.leftDown ? TM.ReleaseMouseToTarget : TM.ClickMouseToTarget;
+    const mode = this.skipDrag ? TM.ClickMouseToTarget : this.leftDown || this.touch ? TM.ReleaseMouseToTarget : TM.ClickMouseToTarget;
     this.tryShowEvokingOrbs();
     this.cardNode?.CardHighlight.AnimFlash();
     const T = G.TargetType, tt = this.card.TargetType;
