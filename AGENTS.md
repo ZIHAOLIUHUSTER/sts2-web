@@ -30,6 +30,13 @@
 
 `packages/core/src/gen/` 由转译器生成。行为和原作不一致时，在 `tools/cs2ts`（转译器）、`packages/core/src/rt`（运行时）或 `packages/core/src/overrides.ts`（少量手写替换）里修，不要直接编辑 `gen/`。
 
+### 同步维护移植版更新日志
+
+- 每次改动都要检查是否需要补充 release notes；新增功能、问题修复、界面调整、性能优化等玩家可感知的变化，应同步记录到 `packages/app/src/port-patchnotes.ts`。纯内部重构、测试或文档调整若不影响玩家体验，可不写入游戏内日志。
+- 按实际改动当天的日期记录，最新日期在前；同一天的改动合并到已有日期下的相关分类，不重复创建日期条目。
+- 同时维护中文（`zhs`）和英文（`eng`），用面向玩家的简短说明描述已完成的变化，避免堆砌实现细节或写入尚未完成、未经验证的功能。
+- 保留原作 `assets/patch_notes/` 中的全部日志及索引，不覆盖或改写原作内容。
+
 ### 使用范围
 
 非官方学习项目，仅供学习使用。`assets/` 和 `packages/core/src/gen/` 来自《Slay the Spire 2》，版权归 Mega Crit 所有。
