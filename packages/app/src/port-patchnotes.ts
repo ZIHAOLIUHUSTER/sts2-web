@@ -4,10 +4,16 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
     date: '2026_10_04',
     eng: `[gold][b]Display and layout[/b][/gold]
 • Added an aspect ratio setting: Auto, 4:3, 16:10, 16:9 and 21:9.
-• Menus, combat, maps and other screens now adapt to the selected aspect ratio, making better use of wide and tall displays.`,
+• Menus, combat, maps and other screens now adapt to the selected aspect ratio, making better use of wide and tall displays.
+
+[gold][b]Feedback[/b][/gold]
+• Added a feedback form, opened from the main menu or the settings. Feedback goes to the web port's author, not to Mega Crit.`,
     zhs: `[gold][b]显示与布局[/b][/gold]
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
-• 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。`,
+• 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。
+
+[gold][b]问题反馈[/b][/gold]
+• 新增问题反馈，可从主菜单或设置中打开。反馈会发给网页版作者，不会发给 Mega Crit。`,
   },
   {
     date: '2026_10_03',
