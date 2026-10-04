@@ -28,7 +28,13 @@ let index: Promise<string[]> | null = null;
 export function loadScene(path: string): Promise<SceneData | null> {
   const rel = path.replace(/^res:\/\//, '').replace(/\.tscn$/, '');
   let p = cache.get(rel);
-  if (!p) cache.set(rel, (p = fetch(`${A}scenes/${rel}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)));
+  if (!p) cache.set(rel, (p = fetch(`${A}scenes/${rel}.json`).then((r) => (r.ok ? r.json() : null)).then((s: SceneData | null) => {
+    // The original sandworm uses thousands of GPU particles; the web renderer simulates them on the CPU.
+    if (s && (rel === 'scenes/backgrounds/the_insatiable_boss/the_insatiable_boss_background' || rel === 'scenes/creature_visuals/the_insatiable')) {
+      for (const it of s.items) if (it.k === 'particles') it.amount = Math.min(it.amount, 32);
+    }
+    return s;
+  }).catch(() => null)));
   return p;
 }
 /** Converted scene paths (for DirAccess listings of res://scenes/...). */
