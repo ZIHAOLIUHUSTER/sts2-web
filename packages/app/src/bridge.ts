@@ -6,6 +6,7 @@ import * as audio from './audio';
 import { ui, invalidate, pushOverlay, popOverlay, hideBackstop, showBackstop } from './store';
 import { loc, locv } from './i18n';
 import { recordDailyScore } from './daily';
+import { reportRunEnd } from './analytics';
 import { createCombatNodes, targetManager, creatureViewsRef, GlobalUiView, type CombatUiView, type ContainerNode } from './cardnodes';
 import { layoutCreatures, deathAnimRemaining, activeStage, visualsKey } from './render/stage';
 import { spineIndex } from './assets';
@@ -47,6 +48,7 @@ const safeGet = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d
 export class RunView extends NRun {
   /** NGlobalUi: card previews outside combat, the top bar's deck button and trail container. */
   GlobalUi = new GlobalUiView();
+  private runEndReported = false;
   constructor(public runState: any) { super(); }
   get MerchantRoom() { return ui.room?.kind === 'shop' ? ui.room : null; }
   SetCurrentRoom(node: any) {
@@ -66,6 +68,10 @@ export class RunView extends NRun {
   }
   /** NRun.ShowGameOverScreen: the capstone and the map close; NGameOverScreen goes on the overlay stack. */
   ShowGameOverScreen(serializableRun: any) {
+    if (!this.runEndReported) {
+      this.runEndReported = true;
+      reportRunEnd(this.runState.CurrentRoom?.IsVictoryRoom ? 'victory' : 'defeat');
+    }
     closePauseMenu();
     safeGet(() => NMapScreen.Instance?.Close(false), undefined);
     ui.gameOver = { serializableRun, runState: this.runState, victory: false };
