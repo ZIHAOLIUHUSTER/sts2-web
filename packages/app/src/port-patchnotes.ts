@@ -6,6 +6,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Added an aspect ratio setting: Auto, 4:3, 16:10, 16:9 and 21:9.
 • Menus, combat, maps and other screens now adapt to the selected aspect ratio, making better use of wide and tall displays.
 • Removed the browser's blue touch highlight throughout the app.
+• Fixed tiny End Turn text on iOS Safari and enlarged the button on small touch screens.
 
 [gold][b]Touch controls[/b][/gold]
 • Fixed buff descriptions disappearing while holding a status icon.
@@ -26,6 +27,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 新增宽高比设置，支持自动、4:3、16:10、16:9 和 21:9。
 • 主菜单、战斗、地图等界面随所选宽高比调整布局，更好地适配宽屏和较高的屏幕。
 • 移除整个应用中按住按钮等控件时浏览器自带的蓝色触摸高亮。
+• 修复 iOS Safari 上结束回合文字过小的问题，并放大小触屏上的按钮。
 
 [gold][b]触屏操作[/b][/gold]
 • 修复按住状态图标时，增益或减益效果说明消失的问题。

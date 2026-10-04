@@ -295,6 +295,10 @@ button { font-family: var(--font); cursor: pointer; }
 /* end_turn_button.tscn: 220 × 90 at (1604, 846), off-screen at y 1096 while hidden. Position, Visuals y (moved by top, so
    the additive glows blend with the scene), hsv v, modulates and the glows are painted by ui/combat-hud.tsx. */
 .end-turn-btn { position: absolute; left: 1604px; top: 1096px; width: 220px; height: 90px; }
+/* Keep the fitted label readable on small touch screens, with room left for the hand. */
+@media (pointer: coarse) {
+  .end-turn-btn { transform: scale(clamp(1, calc(.5 / var(--scale)), 1.5)); transform-origin: right center; }
+}
 .etb-visuals { position: absolute; left: 0; top: 0; width: 220px; height: 90px; }
 .etb-visuals img { position: absolute; left: -18px; top: -19px; width: 256px; height: 128px; pointer-events: none; }
 .etb-glow-vfx, .etb-glow { opacity: 0; mix-blend-mode: plus-lighter; }
@@ -302,6 +306,10 @@ button { font-family: var(--font); cursor: pointer; }
 .etb-glow { filter: url(#tint-0-0_831-1); }
 .etb-label { position: absolute; left: 29px; top: 11px; width: 162px; height: 72px; display: grid; place-items: center; text-align: center; line-height: .95; white-space: nowrap;
   font: 700 30px 'Kreon', var(--font); letter-spacing: 1px; color: #fff6e2; -webkit-text-stroke: 6px rgb(19, 31, 46); paint-order: stroke fill; text-shadow: 3px 2px 0 #00000030; pointer-events: none; }
+/* Measure text without stage zoom: older iOS inflates zoomed fonts, making useFit shrink this label to 8px.
+   Cancel zoom locally, then restore the same visual size and position with a transform. */
+.etb-label { zoom: calc(1 / var(--scale)); transform: scale(var(--scale)); transform-origin: 0 0;
+  left: calc(29px * var(--scale)); top: calc(11px * var(--scale)); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* NEndTurnLongPressBar: additive fill over BarOutline (5 / 4 px around it, black at half the bar's alpha) */
 .etb-bar { position: absolute; left: 8px; top: -11px; width: 0; height: 6px; pointer-events: none; }
 .etb-bar-outline { position: absolute; left: -5px; top: -4px; width: 10px; height: 14px; background: #000; opacity: 0; }
