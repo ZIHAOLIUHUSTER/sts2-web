@@ -1,6 +1,13 @@
 /** Web port updates, newest first. Add both languages here; original game notes remain in assets/patch_notes. */
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
+    date: '2026_10_06',
+    eng: `[gold][b]Wiki[/b][/gold]
+• Added a wiki at /wiki/ on this site, in English and Chinese: cards, relics, potions, powers, keywords, characters, monsters, encounters and events, with the numbers shown in game, filters and search.`,
+    zhs: `[gold][b]资料站[/b][/gold]
+• 本站新增 Wiki（/wiki/），提供中英文：卡牌、遗物、药水、能力、关键词、角色、怪物、遭遇战和事件，数值与游戏内一致，支持筛选和搜索。`,
+  },
+  {
     date: '2026_10_05',
     eng: `[gold][b]Save protection[/b][/gold]
 • Failed writes now preserve the previous save; Save and Quit waits for pending saves.

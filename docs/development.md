@@ -9,10 +9,19 @@
 ```bash
 pnpm install
 pnpm dev                         # 开发服务器 http://127.0.0.1:47173/
-pnpm build                       # tsc + vite 构建，产物在 packages/app/dist
+pnpm build                       # tsc + vite 构建，再生成 Wiki；产物在 packages/app/dist（Wiki 在其中的 wiki/）
+pnpm -F @sts2/wiki build         # 只重新生成 Wiki（需在游戏构建之后：vite 构建会清空 dist）
 pnpm -F @sts2/app preview        # 预览构建 http://127.0.0.1:47174/
 pnpm -F @sts2/core test          # 无头测试（约 2 分钟）
 ```
+
+## Wiki
+
+`packages/wiki` 生成 `/wiki/` 下的资料站：构建时像核心测试一样无头启动规则层，用原作的格式化流程算出中英文描述，每个条目写成一个静态页面（`/wiki/{zhs|eng}/{分类}/{条目}/`），另有 `/wiki/sitemap.xml`。页面通过 `<base>` 以相对路径引用站点根下的 `assets/` 图片，不加载游戏代码。
+
+- `pnpm build` 会在游戏构建之后生成 Wiki；预览用 `pnpm -F @sts2/app preview`，打开 `/wiki/`。
+- sitemap 里的绝对地址取环境变量 `WIKI_ORIGIN`，默认 `https://sts2.moonrailgun.com`。
+- 构建日志会列出格式化失败、回退到原始本地化文本的条目（多是依赖对局状态的事件文本）；某一分类数量明显偏少时构建失败。
 
 ## 页面参数
 
@@ -38,6 +47,7 @@ pnpm -F @sts2/core test          # 无头测试（约 2 分钟）
 
 packages/core   运行时：C#/.NET 语义（BCL、集合、LINQ、Task、JSON）与 Godot API 的 TypeScript 实现
 packages/app    表现层：Preact UI + Pixi 渲染，通过 bridge 接上规则层调用的场景节点
+packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下的中英文静态页面，不依赖 packages/app
 ```
 
 | 目录 | 内容 |

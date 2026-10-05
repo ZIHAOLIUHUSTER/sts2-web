@@ -17,7 +17,7 @@ const walk = (d) => fs.readdirSync(path.join(root, d), { withFileTypes: true }).
 
 const OVERRIDES = 'packages/core/src/overrides.ts';
 const gen = read('packages/core/src/gen/sts2.ts'), stubs = read('packages/core/src/gen/stubs.ts');
-const hand = [...walk('packages/app/src'), ...walk('packages/core/src/rt'), 'packages/core/src/shell.ts', OVERRIDES, ...walk('packages/core/test'), ...walk('tools/e2e')]
+const hand = [...walk('packages/app/src'), ...walk('packages/core/src/rt'), 'packages/core/src/shell.ts', OVERRIDES, ...walk('packages/core/test'), ...walk('tools/e2e'), ...walk('packages/wiki/src')]
   .filter((f) => /\.(ts|tsx|mjs)$/.test(f));
 const exported = new Set(['$']);
 for (const f of ['packages/core/src/gen/sts2.ts', 'packages/core/src/shell.ts'])

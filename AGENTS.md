@@ -48,7 +48,8 @@
 ```bash
 pnpm install
 pnpm dev                         # 开发服务器 http://127.0.0.1:47173/
-pnpm build                       # tsc + vite 构建，产物在 packages/app/dist
+pnpm build                       # tsc + vite 构建，再生成 Wiki；产物在 packages/app/dist（Wiki 在其中的 wiki/）
+pnpm -F @sts2/wiki build         # 只重新生成 Wiki（需在游戏构建之后：vite 构建会清空 dist）
 pnpm -F @sts2/app preview        # 预览构建 http://127.0.0.1:47174/
 pnpm -F @sts2/core test          # 无头测试（Vitest，约 2 分钟）
 pnpm -F @sts2/core exec vitest run test/save.test.ts          # 单个测试文件
@@ -84,12 +85,14 @@ CHROME=<路径> node tools/e2e/continue.mjs /tmp/cont              # 保存并�
 
 packages/core   运行时：C#/.NET 语义（BCL、集合、LINQ、Task、JSON）与 Godot API 的 TypeScript 实现
 packages/app    表现层：Preact UI + Pixi 渲染，通过 bridge 接上规则层调用的场景节点
+packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下的中英文静态页面，不依赖 packages/app
 ```
 
 - **`packages/core/src/gen`**：`sts2.ts` 是规则层，`stubs.ts` 是 Godot 节点等外部类型的桩。外部类型统一走 `$.ext("全名")`。
 - **`packages/core/src/rt`**：手写运行时。`godot.ts` 里的 vfs 承载 `user://`（存档），启动时 `vfs.mount()` 把 IndexedDB 的文件全部读入内存，因为规则层的文件读写是同步的；之后的写入异步落盘。
 - **`packages/core/src/shell.ts`**：`NGame` 的非界面部分（初始化、开新局、继续 / 放弃存档）。
 - **`packages/app/src/bridge.ts`**：用 TypeScript 实现规则层会调用的 Godot 节点单例（`NRun`、`NCombatRoom`、`NMapScreen`、商店、奖励和选牌界面等）。视图对象改完字段后调 `invalidate()`，由 `store.ts` 的 rAF 循环重新渲染。
+- **`packages/wiki`**：`/wiki/` 下的静态资料站（卡牌、遗物、药水、能力、关键词、角色、怪物、遭遇战、事件）。`src/build.ts` 像测试一样无头启动规则层，文本走原作的格式化流程，页面写入 `packages/app/dist/wiki/`。只引用 `assets/` 里的图片，不加载游戏；游戏的 Service Worker 放行 `wiki/`。
 - **`packages/app/src/ui`**：Preact 界面，按 1920 × 1080 逻辑坐标照原作场景摆放。**`packages/app/src/render`**：Pixi 8 + spine-pixi（生物、场景、粒子、着色器）。
 - **两种模式**：测试模式（`TestMode.IsOn`，无动画无等待，Vitest 用）和浏览器模式（走原作的非测试分支，由 bridge 提供节点）。
 

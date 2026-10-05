@@ -21,6 +21,9 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
   const scope = new URL(self.registration.scope).pathname;
+  // the wiki (packages/wiki) is a separate static site: its pages stay out of the game's caches; the assets/ images it
+  // shows still go through them
+  if (url.pathname.startsWith(scope + 'wiki/')) return;
   const isAsset = url.pathname.startsWith(scope + 'assets/');
   e.respondWith((async () => {
     if (isAsset || url.pathname.startsWith(scope + 'js/')) {

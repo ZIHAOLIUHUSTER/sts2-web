@@ -33,7 +33,8 @@
 - 根目录 `package.json` 的 `build` 改为 `pnpm -F @sts2/app build && pnpm -F @sts2/wiki build`。顺序是固定的：vite 构建会清空 `dist/`，所以 wiki 必须在 app 之后。
 - `packages/wiki` 的 `build` 脚本：`vite-node src/build.ts`。
 - `Dockerfile`：在安装依赖前加 `COPY packages/wiki/package.json ./packages/wiki/package.json`。
-- 不需要改的：`.github/workflows/cloudflare.yml`（已经运行 `pnpm build`，触发路径里已有 `packages/**`），以及 `wrangler.jsonc`、`docker/nginx.conf`、`vercel.json`。三者都会把 `/wiki/x` 补成 `/wiki/x/` 并返回其中的 `index.html`。
+- 不需要改的：`.github/workflows/cloudflare.yml`（已经运行 `pnpm build`，触发路径里已有 `packages/**`），以及 `wrangler.jsonc`、`vercel.json`。它们和 nginx 一样会把 `/wiki/x` 补成 `/wiki/x/` 并返回其中的 `index.html`。
+- `docker/nginx.conf` 加 `absolute_redirect off`：nginx 补斜杠时默认发绝对地址，会丢掉 `docker run -p 8080:80` 映射的端口。
 - 本地预览：先 `pnpm build`，再 `pnpm -F @sts2/app preview`，打开 `http://127.0.0.1:47174/wiki/`。
 - `docs/deployment.md`、`docs/development.md` 补充 Wiki 的构建和预览说明。`AGENTS.md` 的常用命令里补一行。
 
@@ -78,7 +79,7 @@ slug 由模型 Id 的 `Entry` 转成：小写，`_` 换成 `-`（`BASH` → `bas
 ## 出错处理
 
 - 单个条目的格式化抛错或输出 Godot error 日志时，回退到原始本地化文本（把 `{…}` 占位符去掉），把条目 Id 记下来，构建结束时汇总打印。整体构建不失败。
-- 构建失败的情况：各分类数量明显不对（卡牌少于 500、遗物少于 250、药水少于 50、角色不是 5、怪物少于 90、事件少于 50），或者有详情页没写出来。数量阈值用来防止规则层或资源变动后，悄悄产出一个残缺的站点。
+- 构建失败的情况：各分类数量明显不对（卡牌少于 500、遗物少于 250、药水少于 50、能力少于 200、关键词少于 5、角色少于 5、怪物少于 90、遭遇战少于 60、事件少于 50），或者有详情页没写出来。数量阈值用来防止规则层或资源变动后，悄悄产出一个残缺的站点。
 
 ## 验证
 
