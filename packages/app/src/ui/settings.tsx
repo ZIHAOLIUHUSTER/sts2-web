@@ -13,6 +13,7 @@ import { imageUrl, frameByName, frameStyle } from '../assets';
 import { languages, setLanguage, loc, appText } from '../i18n';
 import { unlockAll } from '../flow';
 import { exportSaves, importSaves, protectStorage } from '../saves';
+import { reportEvent } from '../analytics';
 import { applyFpsLimit } from '../render/stage';
 import { hsvFilter, tint } from '../filters';
 import { RichText } from './richtext';
@@ -80,6 +81,7 @@ async function confirmUnlockAll() {
   const yes = await confirmPopup({ header: appText('unlockAll'), body: appText('unlockAllBody'), yes: loc('main_menu_ui', 'GENERIC_POPUP.confirm'), no: loc('main_menu_ui', 'GENERIC_POPUP.cancel') });
   if (!yes) return;
   unlockAll(true);
+  reportEvent('unlock_all');
   toast.text = appText('unlockAllDone'); toast.gen++; invalidate();
 }
 

@@ -18,6 +18,7 @@ import { Backdrop } from './backdrop';
 import { mainMenuBackdrop, setMenuBlur, setLogoAlpha } from '../render/scene';
 import { abandonRunPopup } from './modal';
 import { BackButton } from './buttons';
+import { reportEvent } from '../analytics';
 import { hsvFilter, tint } from '../filters';
 import { SettingsScreen } from './settings';
 import { CompendiumSubmenu } from './compendium-menu';
@@ -290,6 +291,7 @@ function PortLinks() {
   return (
     <>
       <a class="mm-github" href="https://github.com/moonrailgun/sts2-web" target="_blank" rel="noopener"
+        onClick={() => reportEvent('github_click')}
         onPointerEnter={() => playOneShot('event:/sfx/ui/clicks/ui_hover')}
         onPointerDown={(e) => { if (e.button === 0) playOneShot('event:/sfx/ui/clicks/ui_click'); }}>
         {/* GitHub's mark (Octicons mark-github) */}

@@ -2,6 +2,7 @@ import { G, $ } from './game';
 import { appText, loc } from './i18n';
 import { ui, invalidate } from './store';
 import { confirmPopup } from './ui/modal';
+import { reportEvent, flushAnalytics } from './analytics';
 
 /** Save metadata without replacing the run's room-entry checkpoint. */
 export function saveMetadata() {
@@ -27,7 +28,7 @@ async function downloadBackup() {
 export async function exportSaves() {
   if (busy) return;
   busy = true;
-  try { await downloadBackup(); notice('backupExported'); }
+  try { await downloadBackup(); notice('backupExported'); reportEvent('save_export'); }
   catch (e) { console.error(e); notice('backupFailed'); }
   finally { busy = false; }
 }
@@ -47,6 +48,8 @@ export function importSaves() {
       const yes = await confirmPopup({ header: appText('restoreSaves'), body: appText('restoreBody'), yes: appText('restoreButton'), no: loc('main_menu_ui', 'GENERIC_POPUP.cancel') });
       if (!yes) return;
       await $.vfs.restore(files);
+      reportEvent('save_import');
+      await flushAnalytics();
       location.reload();
     } catch (e) { console.error(e); notice('backupFailed'); }
     finally { busy = false; }

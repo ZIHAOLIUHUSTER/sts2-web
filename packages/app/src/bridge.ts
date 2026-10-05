@@ -6,7 +6,7 @@ import * as audio from './audio';
 import { ui, invalidate, pushOverlay, popOverlay, hideBackstop, showBackstop } from './store';
 import { loc, locv } from './i18n';
 import { recordDailyScore } from './daily';
-import { reportRunEnd } from './analytics';
+import { reportEvent } from './analytics';
 import { createCombatNodes, targetManager, creatureViewsRef, GlobalUiView, type CombatUiView, type ContainerNode } from './cardnodes';
 import { layoutCreatures, deathAnimRemaining, activeStage, visualsKey } from './render/stage';
 import { spineIndex } from './assets';
@@ -70,7 +70,7 @@ export class RunView extends NRun {
   ShowGameOverScreen(serializableRun: any) {
     if (!this.runEndReported) {
       this.runEndReported = true;
-      reportRunEnd(this.runState.CurrentRoom?.IsVictoryRoom ? 'victory' : 'defeat');
+      reportEvent('run_end', { result: this.runState.CurrentRoom?.IsVictoryRoom ? 'victory' : 'defeat' });
     }
     closePauseMenu();
     safeGet(() => NMapScreen.Instance?.Close(false), undefined);
