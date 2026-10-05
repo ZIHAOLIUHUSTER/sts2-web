@@ -2,12 +2,18 @@
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
     date: '2026_10_05',
-    eng: `[gold][b]Settings[/b][/gold]
+    eng: `[gold][b]Save protection[/b][/gold]
+• Failed writes now preserve the previous save; Save and Quit waits for pending saves.
+
+[gold][b]Settings[/b][/gold]
 • Added Unlock Everything to the General settings, on the main menu: it unlocks every character, all Timeline content and every Ascension level on the current save profile. This cannot be undone.
 
 [gold][b]Display fixes[/b][/gold]
 • Fixed room backgrounds turning blank or black after visiting shops or rest sites on devices with limited graphics resources.`,
-    zhs: `[gold][b]设置[/b][/gold]
+    zhs: `[gold][b]存档保护[/b][/gold]
+• 修复写入失败可能丢失旧档的问题；保存并退出会等待存档完成。
+
+[gold][b]设置[/b][/gold]
 • 主菜单的通用设置中新增「全解锁」：在当前存档中解锁全部角色、时间线中的全部内容和全部进阶等级。此操作无法撤销。
 
 [gold][b]显示修复[/b][/gold]

@@ -10,6 +10,7 @@ import { installFilters } from './filters';
 import { installBridge } from './bridge';
 import { unlockAll } from './flow';
 import { initAnalytics } from './analytics';
+import { saveMetadata } from './saves';
 import './render/vfx-cards';
 import './render/vfx-attacks';
 import './render/vfx-misc';
@@ -178,12 +179,13 @@ async function boot() {
   (window as any).invalidate = invalidate;
   if (import.meta.env.DEV) Object.assign(window, { __loadShader: loadShader, __resolveSfx: resolveSfx }); // tools/e2e/shaders.mjs, audio.mjs
   // NGame._Notification(WM_CLOSE_REQUEST) → Quit: closing the tab saves settings, prefs, progress and the profile
-  window.addEventListener('pageshow', (e) => { if (e.persisted) $.vfs.setUnloading(false); });
-  window.addEventListener('pagehide', () => {
+  const saveOnHide = () => {
     $.vfs.setUnloading(true);
-    const sm = G.SaveManager.Instance;
-    for (const save of ['SaveSettings', 'SavePrefsFile', 'SaveProgressFile', 'SaveProfile']) try { sm[save](); } catch (e) { console.warn(save, e); }
-  });
+    try { saveMetadata(); } catch (e) { console.warn('save on hide', e); }
+  };
+  window.addEventListener('pageshow', (e) => { if (e.persisted) $.vfs.setUnloading(false); });
+  window.addEventListener('pagehide', saveOnHide);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveOnHide(); else $.vfs.setUnloading(false); });
   const qs = new URLSearchParams(location.search);
   if (qs.get('unlock') === 'all') unlockAll(true);
   if (qs.get('tutorials') === 'off') { G.SaveManager.Instance.SetFtuesEnabled(false); G.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true; }

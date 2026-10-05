@@ -223,36 +223,103 @@ const lsKeys = (prefix = LS_PREFIX) => (storage ? Array.from({ length: storage.l
 const JOURNAL = 'sts2fs-j:', DEL = '\u0000deleted';
 let journaling = false;
 function journal(p: string, s: string | null) {
-  if (!journaling || !storage) return;
-  try { storage.setItem(JOURNAL + p, s ?? DEL); } catch { /* quota: best effort */ }
+  if (!storage) return;
+  try { if (journaling || storage.getItem(JOURNAL + p) !== null) storage.setItem(JOURNAL + p, s ?? DEL); } catch { /* quota: best effort */ }
 }
-/** Queue a put (s) or delete (null); IndexedDB runs transactions on one store in creation order. */
-function persist(p: string, s: string | null) {
-  const tx = db!.transaction('files', 'readwrite');
-  const st = tx.objectStore('files');
-  if (s === null) st.delete(p); else st.put(s, p);
-  tx.onerror = () => writeError?.(p, tx.error);
-  tx.onabort = () => writeError?.(p, tx.error);
+type Change = [string, string | null];
+type PendingWrite = { changes: (files: Map<string, string>) => Change[]; done: Promise<void>; ok: () => void; fail: (e: unknown) => void };
+let committed = new Map<string, string>();
+const pending: PendingWrite[] = [];
+const failures = new Map<string, unknown>();
+function apply(files: Map<string, string>, changes: Change[]) {
+  for (const [p, s] of changes) { if (s === null) files.delete(p); else files.set(p, s); }
+}
+function rebuildMemory() {
+  mem = new Map(committed);
+  for (const write of pending) apply(mem, write.changes(mem));
+}
+function drainWrites() {
+  const write = pending[0];
+  if (!write) return;
+  const changes = write.changes(committed);
+  const finish = (error?: unknown) => {
+    if (error) {
+      for (const [p] of changes) failures.set(p, error);
+    } else {
+      apply(committed, changes);
+      for (const [p] of changes) failures.delete(p);
+    }
+    pending.shift();
+    rebuildMemory();
+    for (const [p] of changes) {
+      try {
+        if (storage?.getItem(JOURNAL + p) != null) {
+          if (pending.some(w => w.changes(mem).some(([key]) => key === p))) journal(p, mem.get(p) ?? null);
+          else storage.removeItem(JOURNAL + p);
+        }
+      } catch { /* best effort */ }
+    }
+    if (error) { write.fail(error); writeError?.(changes[0]?.[0] ?? '', error); } else write.ok();
+    drainWrites();
+  };
+  let tx: IDBTransaction | undefined;
+  try {
+    tx = db!.transaction('files', 'readwrite');
+    tx.oncomplete = () => finish();
+    tx.onabort = () => finish(tx!.error ?? new Error('Save transaction aborted'));
+    const st = tx.objectStore('files');
+    for (const [p, s] of changes) { if (s === null) st.delete(p); else st.put(s, p); }
+  } catch (error) {
+    if (tx) { tx.onabort = () => finish(error); tx.abort(); } else finish(error);
+  }
+}
+function writeFiles(changes: PendingWrite['changes']): Promise<void> {
+  if (!db) {
+    const files = storage ? new Map(lsKeys().map(k => [k.slice(LS_PREFIX.length), storage.getItem(k)!])) : mem;
+    // Backup first, primary second: a failed localStorage write never removes the old primary.
+    for (const [p, s] of changes(files)) {
+      try { if (storage) { if (s === null) storage.removeItem(LS_PREFIX + p); else storage.setItem(LS_PREFIX + p, s); } else apply(mem, [[p, s]]); }
+      catch (e) { failures.set(p, e); writeError?.(p, e); throw new (ext('System.IO.IOException') as any)(`Could not write ${p}: ${String(e)}`); }
+      failures.delete(p);
+    }
+    return Promise.resolve();
+  }
+  let ok!: () => void, fail!: (e: unknown) => void;
+  const done = new Promise<void>((resolve, reject) => { ok = resolve; fail = reject; });
+  // Synchronous rule-layer saves cannot await, but flush / async saves still receive the rejection.
+  void done.catch(() => {});
+  const edits = changes(mem);
+  pending.push({ changes, done, ok, fail });
+  apply(mem, edits);
+  for (const [p, s] of edits) journal(p, s);
+  if (pending.length === 1) drainWrites();
+  return done;
 }
 const req = <T>(r: IDBRequest<T>) => new Promise<T>((ok, fail) => { r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error); });
 export const vfs = {
   get persistent() { return db !== null || storage !== null; },
   get backend() { return db ? 'indexeddb' : storage ? 'localstorage' : 'memory'; },
   read(p: string): string | null { return !db && storage ? storage.getItem(LS_PREFIX + p) : mem.get(p) ?? null; },
-  write(p: string, s: string) {
-    if (db) { mem.set(p, s); persist(p, s); journal(p, s); return; }
-    if (!storage) { mem.set(p, s); return; }
-    try { storage.setItem(LS_PREFIX + p, s); } catch (e) {
-      writeError?.(p, e);
-      throw new (ext('System.IO.IOException') as any)(`Could not write ${p}: ${(e as Error)?.name === 'QuotaExceededError' ? 'browser storage is full' : String(e)}`);
-    }
+  write(p: string, s: string) { void writeFiles(() => [[p, s]]); },
+  remove(p: string) { void writeFiles(() => [[p, null]]); },
+  rename(a: string, b: string) { const s = this.read(a); if (s === null) return 7; void writeFiles(() => [[b, s], [a, null]]); return 0; },
+  /** Preserve the previous primary under the original .backup name in the same transaction. */
+  writeSave(p: string, s: string) {
+    return writeFiles(files => files.has(p) ? [[p + '.backup', files.get(p)!], [p, s]] : [[p, s]]);
   },
-  remove(p: string) {
-    if (db) { mem.delete(p); persist(p, null); journal(p, null); } else if (storage) storage.removeItem(LS_PREFIX + p); else mem.delete(p);
+  async flush() {
+    while (pending.length) await Promise.allSettled(pending.map(w => w.done));
+    if (failures.size) throw failures.values().next().value;
   },
   exists(p: string) { return this.read(p) !== null; },
-  /** pagehide: journal what is written from now on; pageshow (back from the bfcache): the writes committed, drop it. */
-  setUnloading(on: boolean) { journaling = on; if (!on) for (const k of lsKeys(JOURNAL)) storage!.removeItem(k); },
+  /** Hidden pages can be killed without pagehide; journal already queued writes too. */
+  setUnloading(on: boolean) {
+    journaling = on;
+    if (on && db) {
+      const files = new Map(committed);
+      for (const write of pending) { const changes = write.changes(files); for (const [p, s] of changes) journal(p, s); apply(files, changes); }
+    }
+  },
   list(dir: string): string[] {
     const pre = dir.endsWith('/') ? dir : dir + '/';
     const keys = !db && storage ? lsKeys().map((k) => k.slice(LS_PREFIX.length)) : [...mem.keys()];
@@ -276,10 +343,11 @@ export const vfs = {
           const p = k.slice(JOURNAL.length), v = storage!.getItem(k)!;
           if (v === DEL) { files.delete(p); tx.objectStore('files').delete(p); } else { files.set(p, v); tx.objectStore('files').put(v, p); }
         }
-        await new Promise<void>((ok, fail) => { tx.oncomplete = () => ok(); tx.onerror = () => fail(tx.error); });
+        await new Promise<void>((ok, fail) => { tx.oncomplete = () => ok(); tx.onabort = () => fail(tx.error); });
         for (const k of [...legacy, ...journaled]) storage!.removeItem(k);
       }
       mem = files;
+      committed = new Map(files);
       db = d;
     } catch (e) { console.warn('IndexedDB unavailable, saves stay in localStorage', e); }
   },
@@ -334,7 +402,7 @@ class DirAccess {
   static MakeDirAbsolute() { return 0; }
   static RemoveAbsolute(p: string) { vfs.remove(p); return 0; }
   // Godot returns an Error code (1 = FAILED) instead of throwing; the source stays when the target cannot be written
-  static RenameAbsolute(a: string, b: string) { const s = vfs.read(a); if (s === null) return 7; try { vfs.write(b, s); } catch { return 1; } vfs.remove(a); return 0; }
+  static RenameAbsolute(a: string, b: string) { try { return vfs.rename(a, b); } catch { return 1; } }
   static CopyAbsolute(a: string, b: string) { const s = vfs.read(a); if (s === null) return 7; try { vfs.write(b, s); } catch { return 1; } return 0; }
   static GetFilesAt(d: string) { if (!isUser(d)) return resLister(resPath(d)); return vfs.list(d).map((k) => k.slice(d.length).replace(/^\//, '')).filter((k) => !k.includes('/')); }
   static GetDirectoriesAt(d: string) { return [...new Set(vfs.list(d).map((k) => k.slice(d.length).replace(/^\//, '')).filter((k) => k.includes('/')).map((k) => k.split('/')[0]))]; }

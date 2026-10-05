@@ -7,7 +7,7 @@ import { G, $, N, list } from '../game';
 import { ui, invalidate, hideOverlays, showOverlays } from '../store';
 import { playOneShot, stopMusic } from '../audio';
 import { imageUrl } from '../assets';
-import { loc } from '../i18n';
+import { loc, appText } from '../i18n';
 import { hsvFilter } from '../filters';
 import { BackButton } from './buttons';
 import { SettingsScreen } from './settings';
@@ -112,11 +112,19 @@ function PauseMenu() {
   const resume = () => { playOneShot('event:/sfx/ui/map/map_close'); closePauseMenu(); };
   const giveUp = async () => { if (await abandonRunPopup()) { closePauseMenu(); rm.Abandon(); } };
   // CloseToMenu: the menu stays up (disabled) through NGame.ReturnToMainMenu's fade
-  const saveAndQuit = () => {
+  const saveAndQuit = async () => {
     setQuitting(true);
-    safe(() => rm.ActionQueueSet.Reset(), undefined);
-    stopMusic();
-    void toMenu().then(() => { submenus.length = 0; ui.pauseOpen = false; capstone.A = 0; capstone.fade = false; });
+    try {
+      await G.SaveManager.Instance.CurrentRunSaveTask;
+      await $.vfs.flush();
+      safe(() => rm.ActionQueueSet.Reset(), undefined);
+      stopMusic();
+      await toMenu();
+      submenus.length = 0; ui.pauseOpen = false; capstone.A = 0; capstone.fade = false;
+    } catch (e) {
+      console.error('Save and quit failed', e);
+      ui.toast = appText('storageFull'); invalidate(); setQuitting(false);
+    }
   };
   const buttons: [string, () => void, number[], string, boolean][] = [
     [p('RESUME'), resume, [1, 0.8, 0.9], '#25545C', true],

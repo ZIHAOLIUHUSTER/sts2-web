@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as G from './gen/sts2';
 import { ext, stubOf } from './rt/core';
-import { toSignal } from './rt/godot';
+import { toSignal, vfs } from './rt/godot';
+import { toTask } from './rt/task';
 import { WebTween } from './rt/tween';
 
 const g = G as any;
@@ -24,7 +25,9 @@ g.StringHelper.GetDeterministicHashCode = (s: string): number => {
 const Task = ext('System.Threading.Tasks.Task') as any;
 const io = g.GodotFileIo.prototype;
 io.ReadFileAsync = function (path: string) { return Task.FromResult(this.ReadFile(path)); };
-io.WriteFileAsync$String_ByteArr = function (path: string, bytes: any) { this.WriteFile$String_ByteArr(path, bytes); return Task.CompletedTask; };
+// Keep filenames and UTF-8 contents unchanged; backup rotation and replacement must commit together.
+io.WriteFile$String_ByteArr = function (path: string, bytes: any) { void vfs.writeSave(this.GetFullPath(path), new TextDecoder().decode(Uint8Array.from(bytes))); };
+io.WriteFileAsync$String_ByteArr = function (path: string, bytes: any) { return toTask(vfs.writeSave(this.GetFullPath(path), new TextDecoder().decode(Uint8Array.from(bytes)))); };
 
 /** Combat replays (.mcr bug-report recordings) are written through FileAccessStream; the web build has no use for them. */
 Object.defineProperty(g.CombatReplayWriter.prototype, 'IsEnabled', { get: () => false, set: () => {}, configurable: true });
