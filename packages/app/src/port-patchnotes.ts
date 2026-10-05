@@ -1,6 +1,13 @@
 /** Web port updates, newest first. Add both languages here; original game notes remain in assets/patch_notes. */
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
+    date: '2026_10_05',
+    eng: `[gold][b]Settings[/b][/gold]
+• Added Unlock Everything to the General settings, on the main menu: it unlocks every character, all Timeline content and every Ascension level on the current save profile. This cannot be undone.`,
+    zhs: `[gold][b]设置[/b][/gold]
+• 主菜单的通用设置中新增「全解锁」：在当前存档中解锁全部角色、时间线中的全部内容和全部进阶等级。此操作无法撤销。`,
+  },
+  {
     date: '2026_10_04',
     eng: `[gold][b]Display and layout[/b][/gold]
 • Added an aspect ratio setting: Auto, 4:3, 16:10, 16:9 and 21:9.

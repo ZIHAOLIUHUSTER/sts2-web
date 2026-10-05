@@ -60,6 +60,7 @@ CHROME=<headless shell 路径> FAST=1 GOD=1 node tools/e2e/play.mjs /tmp/play   
 CHROME=<路径> UNLOCK=0 GOD=1 FULL=1 SEED=E2EFINAL node tools/e2e/play.mjs /tmp/full 12000   # 全新存档完整一局：药水、牌堆查看、每层读档检查、保存退出+刷新+继续、通关后时间线收尾
 CHROME=<headless shell 路径> node tools/e2e/coverage.mjs /tmp/cov                 # 全部卡牌/药水/遭遇战/遗物/事件覆盖
 CHROME=<headless shell 路径> node tools/e2e/continue.mjs /tmp/cont                # 保存并退出 → 刷新 → 继续
+CHROME=<headless shell 路径> node tools/e2e/unlock-all.mjs /tmp/unlock           # 设置里的全解锁：全新存档确认解锁 → 检查写入 → 刷新后仍在 → 局内不提供
 CHROME=<headless shell 路径> node tools/e2e/console.mjs /tmp/console             # 开发者控制台：开关、补全、执行命令、历史
 CHROME=<headless shell 路径> node tools/e2e/crystal-sphere.mjs /tmp/crystal      # 水晶球事件：占卜到次数用完 → 领取压在占卜盘上的奖励 → 继续
 CHROME=<headless shell 路径> node tools/e2e/screens.mjs /tmp/screens              # 菜单侧各界面与局内新界面截图

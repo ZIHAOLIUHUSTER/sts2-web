@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import './style.css';
-import { G, $, list } from './game';
+import { G, $ } from './game';
 import { ui, setRenderer, startLoop, invalidate, type Screen } from './store';
 import { DevConsole } from './ui/devconsole'; // before the modules below: its key listener must be the first one registered
 import { loadAssetIndex } from './assets';
@@ -8,6 +8,7 @@ import { preloadLocalization, addListedFiles, appText } from './i18n';
 import { sceneIndex } from './render/scene';
 import { installFilters } from './filters';
 import { installBridge } from './bridge';
+import { unlockAll } from './flow';
 import { initAnalytics } from './analytics';
 import './render/vfx-cards';
 import './render/vfx-attacks';
@@ -173,7 +174,7 @@ async function boot() {
   invalidate();
   (window as any).G = G;
   (window as any).ui = ui;
-  (window as any).unlockAll = unlockAll;
+  (window as any).unlockAll = () => unlockAll(true);
   (window as any).invalidate = invalidate;
   if (import.meta.env.DEV) Object.assign(window, { __loadShader: loadShader, __resolveSfx: resolveSfx }); // tools/e2e/shaders.mjs, audio.mjs
   // NGame._Notification(WM_CLOSE_REQUEST) → Quit: closing the tab saves settings, prefs, progress and the profile
@@ -184,26 +185,8 @@ async function boot() {
     for (const save of ['SaveSettings', 'SavePrefsFile', 'SaveProgressFile', 'SaveProfile']) try { sm[save](); } catch (e) { console.warn(save, e); }
   });
   const qs = new URLSearchParams(location.search);
-  if (qs.get('unlock') === 'all') unlockAll();
+  if (qs.get('unlock') === 'all') unlockAll(true);
   if (qs.get('tutorials') === 'off') { G.SaveManager.Instance.SetFtuesEnabled(false); G.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true; }
-}
-/** The dev console's `unlock all` (UnlockConsoleCmd): everything discovered, every epoch revealed, ascension 10. */
-function unlockAll() {
-  const sm = G.SaveManager.Instance, p = sm.Progress;
-  for (const c of list(G.ModelDb.AllCards)) p.MarkCardAsSeen(c.Id);
-  for (const r of list(G.ModelDb.AllRelics)) p.MarkRelicAsSeen(r.Id);
-  for (const x of list(G.ModelDb.AllPotions)) p.MarkPotionAsSeen(x.Id);
-  for (const e of list(G.ModelDb.AllEvents)) p.MarkEventAsSeen(e.Id);
-  for (const m of list(G.ModelDb.Monsters)) {
-    const s = p.GetOrCreateEnemyStats(m.Id);
-    if (s.FightStats.Count === 0) s.FightStats.Add(Object.assign(new G.FightStats().$ctor_FightStats(), { Character: G.ModelDb.Character(G.Ironclad).Id, Wins: 1 }));
-  }
-  const revealed = new Set(list(p.Epochs).filter((e: any) => e.State === G.EpochState.Revealed).map((e: any) => e.Id));
-  for (const id of list(G.EpochModel.AllEpochIds)) if (!revealed.has(id)) sm.ObtainEpochOverride(id, G.EpochState.Revealed);
-  p.MaxMultiplayerAscension = 10;
-  for (const c of list(G.ModelDb.AllCharacters)) p.GetOrCreateCharacterStats(c.Id).MaxAscension = 10;
-  sm.SaveProgressFile();
-  invalidate();
 }
 // offline cache (production builds only; the dev server serves modules that must not be cached). Boot waits (briefly)
 // for the worker to claim the page when no worker serves this build's asset tree yet: on a first visit, so the assets

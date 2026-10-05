@@ -10,7 +10,8 @@ import { ui, invalidate } from '../store';
 import { setVolumes } from '../audio';
 import { playOneShot } from '../audio';
 import { imageUrl, frameByName, frameStyle } from '../assets';
-import { languages, setLanguage, loc } from '../i18n';
+import { languages, setLanguage, loc, appText } from '../i18n';
+import { unlockAll } from '../flow';
 import { applyFpsLimit } from '../render/stage';
 import { hsvFilter, tint } from '../filters';
 import { RichText } from './richtext';
@@ -73,9 +74,18 @@ async function confirmReset(body: string, reset: () => void) {
   if (yes) { reset(); invalidate(); }
 }
 const RESET: Omit<Extract<Row, { kind: 'button' }>, 'label' | 'onClick'> = { kind: 'button', text: '', hsv: [0.45, 1.5, 0.8], outline: 'rgb(74, 37, 36)' };
+/** Web: the port's full unlock (flow.ts unlockAll) asks first, as the progress save cannot go back. */
+async function confirmUnlockAll() {
+  const yes = await confirmPopup({ header: appText('unlockAll'), body: appText('unlockAllBody'), yes: loc('main_menu_ui', 'GENERIC_POPUP.confirm'), no: loc('main_menu_ui', 'GENERIC_POPUP.cancel') });
+  if (!yes) return;
+  unlockAll();
+  toast.text = appText('unlockAllDone'); toast.gen++; invalidate();
+}
 
 function generalRows(inRun: boolean): Row[] {
   const p = prefs;
+  // not in a run: its unlock state was fixed when it started
+  const unlock: Row[] = inRun ? [] : [{ kind: 'button', label: appText('unlockAll'), text: appText('unlockAllButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: () => void confirmUnlockAll() }];
   return [
     { kind: 'lang', label: s(inRun ? 'LANGUAGE_IN_RUN' : 'LANGUAGE'), disabled: inRun },
     { kind: 'page', label: s('SCREENSHAKE'), tip: [s('SCREENSHAKE_HEADER'), s('SCREENSHAKE_DESCRIPTION')], options: ['NONE', 'SOME', 'NORMAL', 'LOTS', 'CAAAW'].map((k) => s(`SCREENSHAKE_${k}`)),
@@ -90,6 +100,7 @@ function generalRows(inRun: boolean): Row[] {
     tick('TEXT_EFFECTS', 'TEXT_EFFECTS', () => p().TextEffectsEnabled, (v) => { p().TextEffectsEnabled = v; }, 'TEXT_EFFECTS'),
     { kind: 'button', label: s('SEND_FEEDBACK'), text: s('SEND_FEEDBACK_BUTTON_LABEL'), hsv: [0.82, 1.4, 0.8], outline: 'rgb(32, 66, 36)', onClick: openFeedback },
     { kind: 'button', label: s('CREDITS'), text: s('CREDITS_BUTTON_LABEL'), hsv: [0.61, 1.6, 1.3], outline: 'rgb(51, 40, 25)', onClick: openCredits },
+    ...unlock,
     { ...RESET, label: s('RESET_DEFAULT'), text: s('RESET_SETTINGS_BUTTON'), onClick: () => void confirmReset('RESET_GAMEPLAY_CONFIRMATION.body', resetGeneral) },
   ];
 }

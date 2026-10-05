@@ -43,6 +43,30 @@ function rollRandomCharacter() {
 }
 const safe = (f: () => void) => { try { f(); } catch (e) { console.warn(e); } };
 /**
+ * Full unlock, written to the progress save. The settings screen's button gives what gates play: every epoch revealed
+ * (characters, card / relic / potion pools, ancients) and ascension 10. `discover` adds the rest of the dev console's
+ * `unlock all` (UnlockConsoleCmd): everything marked seen and a win against every monster.
+ */
+export function unlockAll(discover = false) {
+  const sm = G.SaveManager.Instance, p = sm.Progress;
+  if (discover) {
+    for (const c of list(G.ModelDb.AllCards)) p.MarkCardAsSeen(c.Id);
+    for (const r of list(G.ModelDb.AllRelics)) p.MarkRelicAsSeen(r.Id);
+    for (const x of list(G.ModelDb.AllPotions)) p.MarkPotionAsSeen(x.Id);
+    for (const e of list(G.ModelDb.AllEvents)) p.MarkEventAsSeen(e.Id);
+    for (const m of list(G.ModelDb.Monsters)) {
+      const s = p.GetOrCreateEnemyStats(m.Id);
+      if (s.FightStats.Count === 0) s.FightStats.Add(Object.assign(new G.FightStats().$ctor_FightStats(), { Character: G.ModelDb.Character(G.Ironclad).Id, Wins: 1 }));
+    }
+  }
+  const revealed = new Set(list(p.Epochs).filter((e: any) => e.State === G.EpochState.Revealed).map((e: any) => e.Id));
+  for (const id of list(G.EpochModel.AllEpochIds)) if (!revealed.has(id)) sm.ObtainEpochOverride(id, G.EpochState.Revealed);
+  p.MaxMultiplayerAscension = 10;
+  for (const c of list(G.ModelDb.AllCharacters)) p.GetOrCreateCharacterStats(c.Id).MaxAscension = 10;
+  sm.SaveProgressFile();
+  invalidate();
+}
+/**
  * NMainMenu.OnContinueButtonPressedAsync: the character's wipe (sfx + transition material), then rebuild the saved run,
  * re-enter its latest map point and fade in.
  */

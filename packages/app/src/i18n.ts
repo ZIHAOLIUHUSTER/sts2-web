@@ -94,6 +94,14 @@ const APP: Record<string, Record<string, string>> = {
   afterReload: { eng: 'Applies the next time the game loads.', zhs: '下次载入游戏时生效。' },
   noStorage: { eng: 'This browser blocks storage: progress lasts until the tab closes.', zhs: '浏览器禁止了本地存储：进度只保留到关闭页面为止。' },
   unofficial: { eng: 'Unofficial fan port, for learning only', zhs: '非官方正版，仅供学习使用' }, // ui/menu.tsx PortLinks
+  // ui/settings.tsx: the port's full unlock
+  unlockAll: { eng: 'Unlock Everything', zhs: '全解锁' },
+  unlockAllButton: { eng: 'Unlock', zhs: '解锁' },
+  unlockAllBody: {
+    eng: 'Unlocks every character, all Timeline content (cards, relics, potions and more) and every Ascension level on this save profile.\n\n[red]This cannot be undone.[/red] To keep your current progress, switch to an empty save profile first.',
+    zhs: '在当前存档中解锁全部角色、时间线中的全部内容（卡牌、遗物、药水等）以及全部进阶等级。\n\n[red]此操作无法撤销。[/red]想保留现有进度的话，可以先切换到一个空存档。',
+  },
+  unlockAllDone: { eng: 'Everything is unlocked.', zhs: '已全部解锁。' },
   // ui/feedback.tsx: the feedback goes to the port, not to Mega Crit
   feedback: { eng: 'Feedback', zhs: '问题反馈' },
   feedbackPlaceholder: { eng: "Feedback here goes to this web port's author, not to Mega Crit. Up to 500 characters.", zhs: '这里的反馈会发给网页版作者，不会发给 Mega Crit。最多 500 字。' },
