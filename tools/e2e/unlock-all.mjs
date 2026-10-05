@@ -1,4 +1,4 @@
-// Settings → Unlock Everything on a fresh profile: confirm, check what it wrote (epochs and ascensions, no discoveries),
+// Settings → Unlock Everything on a fresh profile: confirm, check epochs, ascensions and compendium discoveries,
 // reload, check it survived, then check a run's settings do not offer it.
 // Usage: CHROME=<path> [URL=<dev server>] node tools/e2e/unlock-all.mjs <outDir>   (exit 1 on failure)
 import { chromium } from 'playwright';
@@ -17,11 +17,12 @@ const state = () => page.evaluate(() => {
     characters: n(sm.GenerateUnlockStateFromProgress().Characters),
     epochs: Array.from(p.Epochs).filter((e) => e.State === G.EpochState.Revealed).length,
     ascension: Math.min(...Array.from(G.ModelDb.AllCharacters, (c) => p.GetOrCreateCharacterStats(c.Id).MaxAscension)),
-    seen: n(p.DiscoveredCards) + n(p.DiscoveredRelics) + n(p.DiscoveredPotions),
+    cards: n(p.DiscoveredCards), relics: n(p.DiscoveredRelics), potions: n(p.DiscoveredPotions), events: n(p.DiscoveredEvents),
     fought: Array.from(p.EnemyStats.Values).filter((e) => e.TotalWins > 0).length,
+    runs: p.NumberOfRuns,
   };
 });
-const settingsButtons = () => page.locator('.settings-row', { has: page.locator('.st-button') }).count();
+const unlockRow = page.locator('.settings-row', { hasText: /Unlock Everything|全解锁/ });
 /** A held click: NButtons act on release, and an instant tap can hide a button that goes away on press. */
 const press = async (loc) => {
   const b = await loc.boundingBox();
@@ -33,13 +34,19 @@ const press = async (loc) => {
 
 await page.goto((process.env.URL ?? 'http://127.0.0.1:47173/') + '?seed=UNLOCKALL1&tutorials=off');
 await page.waitForFunction(() => window.ui?.screen === 'menu', null, { timeout: 60000 });
-const all = await page.evaluate(() => ({ characters: Array.from(window.G.ModelDb.AllCharacters).length, epochs: Array.from(window.G.EpochModel.AllEpochIds).length }));
+const all = await page.evaluate(() => {
+  const G = window.G, n = (x) => Array.from(x).length;
+  return {
+    characters: n(G.ModelDb.AllCharacters), epochs: n(G.EpochModel.AllEpochIds),
+    cards: n(G.ModelDb.AllCards), relics: n(G.ModelDb.AllRelics), potions: n(G.ModelDb.AllPotions), events: n(G.ModelDb.AllEvents),
+    fought: n(G.ModelDb.Monsters),
+  };
+});
 const before = await state();
 if (before.characters >= all.characters) await fail('the fresh profile has nothing locked');
 
 await page.evaluate(() => { window.ui.menuStack = ['settings']; window.invalidate(); });
 await page.waitForSelector('.settings-screen .st-button');
-const menuButtons = await settingsButtons();
 // the row is under the fold: once the menu's fade from black no longer covers the screen, wheel down to the panel's end
 // (it springs back from past it)
 await page.waitForFunction(() => document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest('.settings-screen'));
@@ -47,7 +54,7 @@ await page.mouse.move(viewport.width / 2, viewport.height / 2);
 for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 100);
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${out}/settings.png` });
-await press(page.locator('.st-button').nth(2)); // after Feedback and Credits
+await press(unlockRow.locator('.st-button'));
 await page.waitForSelector('.vpopup');
 await page.screenshot({ path: `${out}/confirm.png` });
 if (JSON.stringify(await state()) !== JSON.stringify(before)) await fail('unlocked before the confirmation');
@@ -57,7 +64,8 @@ const after = await state();
 await page.screenshot({ path: `${out}/unlocked.png` });
 console.log('all', JSON.stringify(all), 'before', JSON.stringify(before), 'after', JSON.stringify(after));
 if (after.characters !== all.characters || after.epochs !== all.epochs || after.ascension !== 10) await fail('not everything is unlocked');
-if (after.seen !== before.seen || after.fought !== before.fought) await fail('discoveries or fight records changed');
+for (const key of ['cards', 'relics', 'potions', 'events', 'fought']) if (after[key] !== all[key]) await fail(`${key} are not all discovered`);
+if (after.runs !== before.runs) await fail('the unlock changed the completed run count');
 
 // the progress save must survive a reload (IndexedDB, written asynchronously)
 await page.waitForTimeout(500);
@@ -73,7 +81,7 @@ await page.click('.tb-settings');
 await page.waitForSelector('.pause-menu');
 await page.click('.pause-btn >> nth=1'); // Settings
 await page.waitForSelector('.settings-screen .st-button');
-if (await settingsButtons() !== menuButtons - 1) await fail('a run\'s settings still offer the unlock');
+if (await unlockRow.count()) await fail('a run\'s settings still offer the unlock');
 if (errors.length) await fail('page errors');
 console.log('OK');
 await browser.close();

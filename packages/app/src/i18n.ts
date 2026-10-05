@@ -112,8 +112,8 @@ const APP: Record<string, Record<string, string>> = {
   unlockAll: { eng: 'Unlock Everything', zhs: '全解锁' },
   unlockAllButton: { eng: 'Unlock', zhs: '解锁' },
   unlockAllBody: {
-    eng: 'Unlocks every character, all Timeline content (cards, relics, potions and more) and every Ascension level on this save profile.\n\n[red]This cannot be undone.[/red] To keep your current progress, switch to an empty save profile first.',
-    zhs: '在当前存档中解锁全部角色、时间线中的全部内容（卡牌、遗物、药水等）以及全部进阶等级。\n\n[red]此操作无法撤销。[/red]想保留现有进度的话，可以先切换到一个空存档。',
+    eng: 'Unlocks all characters, Timeline content and Ascensions, and marks Compendium entries as discovered. Enemies with no fight records gain one win.\n\n[red]Cannot be undone.[/red] To keep this profile\'s progress, switch to an empty profile first.',
+    zhs: '在当前存档中解锁全部角色、时间线内容和进阶等级，并标记百科条目为已发现。没有战斗记录的敌人会补记一次胜利。\n\n[red]此操作无法撤销。[/red]想保留现有进度的话，可以先切换到一个空存档。',
   },
   unlockAllDone: { eng: 'Everything is unlocked.', zhs: '已全部解锁。' },
   // ui/feedback.tsx: the feedback goes to the port, not to Mega Crit

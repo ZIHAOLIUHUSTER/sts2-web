@@ -79,7 +79,7 @@ const RESET: Omit<Extract<Row, { kind: 'button' }>, 'label' | 'onClick'> = { kin
 async function confirmUnlockAll() {
   const yes = await confirmPopup({ header: appText('unlockAll'), body: appText('unlockAllBody'), yes: loc('main_menu_ui', 'GENERIC_POPUP.confirm'), no: loc('main_menu_ui', 'GENERIC_POPUP.cancel') });
   if (!yes) return;
-  unlockAll();
+  unlockAll(true);
   toast.text = appText('unlockAllDone'); toast.gen++; invalidate();
 }
 

@@ -43,9 +43,8 @@ function rollRandomCharacter() {
 }
 const safe = (f: () => void) => { try { f(); } catch (e) { console.warn(e); } };
 /**
- * Full unlock, written to the progress save. The settings screen's button gives what gates play: every epoch revealed
- * (characters, card / relic / potion pools, ancients) and ascension 10. `discover` adds the rest of the dev console's
- * `unlock all` (UnlockConsoleCmd): everything marked seen and a win against every monster.
+ * Full unlock, written to the progress save: every epoch revealed and ascension 10. `discover` also applies the dev
+ * console's `unlock all` (UnlockConsoleCmd) discoveries: everything marked seen and a win for monsters with no records.
  */
 export function unlockAll(discover = false) {
   const sm = G.SaveManager.Instance, p = sm.Progress;
