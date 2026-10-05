@@ -48,7 +48,7 @@ try {
       await io.WriteFileAsync$String_String('probe.save', '{"version":4}');
       await vfs.flush();
       const retried = await disk();
-      let queued;
+      let queued, restoreFailed;
       if (backend === 'indexeddb') {
         let aborted = false;
         IDBObjectStore.prototype.put = function (value, key) {
@@ -62,8 +62,21 @@ try {
         IDBObjectStore.prototype.put = put;
         await vfs.flush();
         queued = await disk();
+        const snapshot = vfs.list('user://').map(p => [p, vfs.read(p)]);
+        IDBObjectStore.prototype.put = function (value, key) {
+          const r = put.call(this, value, key);
+          if (String(key).startsWith(prefix)) queueMicrotask(() => this.transaction.abort());
+          return r;
+        };
+        try { await vfs.restore([[path, '{"version":7}']]); } catch { restoreFailed = true; }
+        IDBObjectStore.prototype.put = put;
+        if (JSON.stringify(snapshot) !== JSON.stringify(vfs.list('user://').map(p => [p, vfs.read(p)]))) throw new Error('Failed restore changed files');
+        await vfs.flush();
+        // Failed restore must remain retryable. Success freezes stale writers until reload.
+        await vfs.restore(snapshot);
+        if (!vfs.restored) throw new Error('Restore did not block stale writers');
       }
-      return { backend: vfs.backend, before, after, rejected, reported, memory, retried, queued };
+      return { backend: vfs.backend, before, after, rejected, reported, memory, retried, queued, restoreFailed };
     }, backend);
     assert.equal(result.backend, backend);
     assert.deepEqual(result.before, ['{"version":2}', '{"version":1}']);
@@ -75,6 +88,7 @@ try {
     assert.deepEqual(result.retried, ['{"version":4}', '{"version":2}']);
     if (backend === 'indexeddb') {
       assert.deepEqual(result.queued, ['{"version":6}', '{"version":4}']);
+      assert.equal(result.restoreFailed, true);
     }
     console.log('OK', backend, result);
     await context.close();

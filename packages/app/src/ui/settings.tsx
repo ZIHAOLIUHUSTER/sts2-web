@@ -12,6 +12,7 @@ import { playOneShot } from '../audio';
 import { imageUrl, frameByName, frameStyle } from '../assets';
 import { languages, setLanguage, loc, appText } from '../i18n';
 import { unlockAll } from '../flow';
+import { exportSaves, importSaves } from '../saves';
 import { applyFpsLimit } from '../render/stage';
 import { hsvFilter, tint } from '../filters';
 import { RichText } from './richtext';
@@ -101,6 +102,8 @@ function generalRows(inRun: boolean): Row[] {
     { kind: 'button', label: s('SEND_FEEDBACK'), text: s('SEND_FEEDBACK_BUTTON_LABEL'), hsv: [0.82, 1.4, 0.8], outline: 'rgb(32, 66, 36)', onClick: openFeedback },
     { kind: 'button', label: s('CREDITS'), text: s('CREDITS_BUTTON_LABEL'), hsv: [0.61, 1.6, 1.3], outline: 'rgb(51, 40, 25)', onClick: openCredits },
     ...unlock,
+    { kind: 'button', label: appText('exportSaves'), text: appText('exportButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: () => void exportSaves() },
+    ...(!inRun ? [{ kind: 'button' as const, label: appText('restoreSaves'), text: appText('restoreButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: importSaves }] : []),
     { ...RESET, label: s('RESET_DEFAULT'), text: s('RESET_SETTINGS_BUTTON'), onClick: () => void confirmReset('RESET_GAMEPLAY_CONFIRMATION.body', resetGeneral) },
   ];
 }

@@ -231,6 +231,7 @@ type PendingWrite = { changes: (files: Map<string, string>) => Change[]; done: P
 let committed = new Map<string, string>();
 const pending: PendingWrite[] = [];
 const failures = new Map<string, unknown>();
+let restored = false;
 function apply(files: Map<string, string>, changes: Change[]) {
   for (const [p, s] of changes) { if (s === null) files.delete(p); else files.set(p, s); }
 }
@@ -274,6 +275,7 @@ function drainWrites() {
   }
 }
 function writeFiles(changes: PendingWrite['changes']): Promise<void> {
+  if (restored) throw new Error('Saves restored; reload before writing');
   if (!db) {
     const files = storage ? new Map(lsKeys().map(k => [k.slice(LS_PREFIX.length), storage.getItem(k)!])) : mem;
     // Backup first, primary second: a failed localStorage write never removes the old primary.
@@ -299,6 +301,7 @@ const req = <T>(r: IDBRequest<T>) => new Promise<T>((ok, fail) => { r.onsuccess 
 export const vfs = {
   get persistent() { return db !== null || storage !== null; },
   get backend() { return db ? 'indexeddb' : storage ? 'localstorage' : 'memory'; },
+  get restored() { return restored; },
   read(p: string): string | null { return !db && storage ? storage.getItem(LS_PREFIX + p) : mem.get(p) ?? null; },
   write(p: string, s: string) { void writeFiles(() => [[p, s]]); },
   remove(p: string) { void writeFiles(() => [[p, null]]); },
@@ -310,6 +313,17 @@ export const vfs = {
   async flush() {
     while (pending.length) await Promise.allSettled(pending.map(w => w.done));
     if (failures.size) throw failures.values().next().value;
+  },
+  /** Restore only with a backend that can replace the complete snapshot atomically. */
+  async restore(files: [string, string][]) {
+    if (!db) throw new Error('Restore requires IndexedDB');
+    await this.flush();
+    // Import is all-or-nothing, including across page termination: do not split it into legacy journal entries.
+    const wasJournaling = journaling;
+    journaling = false;
+    const done = writeFiles(current => [...[...current.keys()].filter(p => p.startsWith('user://') && !files.some(([key]) => key === p)).map(p => [p, null] as Change), ...files]);
+    restored = true; // stale SaveManager objects must not overwrite imported data during reload
+    try { await done; } catch (e) { restored = false; failures.clear(); throw e; } finally { journaling = wasJournaling; }
   },
   exists(p: string) { return this.read(p) !== null; },
   /** Hidden pages can be killed without pagehide; journal already queued writes too. */

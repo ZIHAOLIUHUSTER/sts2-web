@@ -185,6 +185,7 @@ async function boot() {
   if (import.meta.env.DEV) Object.assign(window, { __loadShader: loadShader, __resolveSfx: resolveSfx }); // tools/e2e/shaders.mjs, audio.mjs
   // NGame._Notification(WM_CLOSE_REQUEST) → Quit: closing the tab saves settings, prefs, progress and the profile
   const saveOnHide = () => {
+    if ($.vfs.restored) return;
     $.vfs.setUnloading(true);
     try { saveMetadata(); } catch (e) { console.warn('save on hide', e); }
   };
