@@ -83,7 +83,9 @@ button { font-family: var(--font); cursor: pointer; }
 .mm-github.mm-feedback { top: 936px; cursor: pointer; }
 .mm-github svg { width: 36px; height: 36px; fill: currentColor; filter: drop-shadow(3px 2px 0 rgba(0, 0, 0, .25)); }
 .mm-notice { position: absolute; left: 1302px; top: 1020px; width: 600px; text-align: right; white-space: nowrap; font: 400 20px/24px var(--font); letter-spacing: 1px;
-  color: var(--cream); opacity: .55; text-shadow: 3px 2px 0 rgba(0, 0, 0, .25); pointer-events: none; }
+  color: var(--cream); text-shadow: 3px 2px 0 rgba(0, 0, 0, .25); pointer-events: none; }
+.mm-notice span { opacity: .55; pointer-events: auto; cursor: pointer; transition: opacity .3s; }
+.mm-notice span:hover { opacity: 1; transition: none; }
 /* NSingleplayerSubmenu: three NSubmenuButtons */
 .sp-submenu { position: absolute; inset: 0; }
 .submenu-btn { position: absolute; top: 187px; width: 330px; height: 705px; transform-origin: 150px 250px; transition: scale .5s cubic-bezier(0.33, 1, 0.68, 1); cursor: pointer; }

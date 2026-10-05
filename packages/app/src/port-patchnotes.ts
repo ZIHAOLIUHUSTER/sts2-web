@@ -10,6 +10,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]Settings[/b][/gold]
 • Added Unlock Everything to the General settings, on the main menu: it unlocks every character, all Timeline content and every Ascension level, and reveals Compendium entries on the current save profile. This cannot be undone.
+• Clicking the notice in the main menu's bottom-right corner reopens the About This Project window.
 
 [gold][b]Display fixes[/b][/gold]
 • Fixed room backgrounds turning blank or black after visiting shops or rest sites on devices with limited graphics resources.`,
@@ -21,6 +22,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 
 [gold][b]设置[/b][/gold]
 • 主菜单的通用设置中新增「全解锁」：在当前存档中解锁全部角色、时间线中的全部内容和全部进阶等级，并点亮百科图鉴。此操作无法撤销。
+• 点击主菜单右下角的说明文字可再次打开「关于本项目」窗口。
 
 [gold][b]显示修复[/b][/gold]
 • 修复图形资源受限的设备在进入商店、火堆后，房间背景持续空白或黑屏的问题。`,

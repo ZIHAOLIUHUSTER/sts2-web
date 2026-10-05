@@ -3,6 +3,7 @@
 // the header (Kreon Bold 40, auto-sized 28–40, gold) and the description (Kreon 26, auto-sized 18–26, cream) in a
 // 542-wide VBox (separation 24), with NDisclaimerProceedButton (reward_skip_button, hsv .48 / 1.5 / .8) at the bottom.
 // Proceed: the panel rises 1000 px (0.5 s Back In), then the flag is saved and the modal cleared.
+// Not in the game: the main menu's bottom-right notice (ui/menu.tsx PortLinks) reopens it via showAboutDialog.
 import { useRef, useState } from 'preact/hooks';
 import { G, $ } from '../game';
 import { imageUrl } from '../assets';
@@ -16,8 +17,10 @@ import { openModal, closeModal, setPopupKeys } from './modal';
 export function showEarlyAccessDisclaimer() {
   const s = G.SaveManager.Instance?.SettingsSave;
   if (!s || s.SeenEaDisclaimer) return;
-  openModal(() => <Disclaimer />);
+  showAboutDialog();
 }
+
+export function showAboutDialog() { openModal(() => <Disclaimer />); }
 
 function Disclaimer() {
   const panel = useRef<HTMLDivElement>(null), header = useRef<HTMLDivElement>(null), desc = useRef<HTMLDivElement>(null);
