@@ -6,6 +6,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Failed writes now preserve the previous save; Save and Quit waits for pending saves.
 • Prevented simultaneous game tabs from overwriting saves in browsers supporting Web Locks.
 • Added downloadable backups for all profiles and run history, and backup restoration in General settings.
+• Added a browser storage protection request in General settings.
 
 [gold][b]Settings[/b][/gold]
 • Added Unlock Everything to the General settings, on the main menu: it unlocks every character, all Timeline content and every Ascension level on the current save profile. This cannot be undone.
@@ -16,6 +17,7 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 修复写入失败可能丢失旧档的问题；保存并退出会等待存档完成。
 • 支持 Web Locks 的浏览器会阻止多个游戏页面同时覆盖存档。
 • 通用设置新增全存档及对局历史备份下载和备份恢复。
+• 通用设置新增浏览器存储保护申请。
 
 [gold][b]设置[/b][/gold]
 • 主菜单的通用设置中新增「全解锁」：在当前存档中解锁全部角色、时间线中的全部内容和全部进阶等级。此操作无法撤销。

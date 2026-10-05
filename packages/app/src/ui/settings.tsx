@@ -12,7 +12,7 @@ import { playOneShot } from '../audio';
 import { imageUrl, frameByName, frameStyle } from '../assets';
 import { languages, setLanguage, loc, appText } from '../i18n';
 import { unlockAll } from '../flow';
-import { exportSaves, importSaves } from '../saves';
+import { exportSaves, importSaves, protectStorage } from '../saves';
 import { applyFpsLimit } from '../render/stage';
 import { hsvFilter, tint } from '../filters';
 import { RichText } from './richtext';
@@ -104,6 +104,7 @@ function generalRows(inRun: boolean): Row[] {
     ...unlock,
     { kind: 'button', label: appText('exportSaves'), text: appText('exportButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: () => void exportSaves() },
     ...(!inRun ? [{ kind: 'button' as const, label: appText('restoreSaves'), text: appText('restoreButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: importSaves }] : []),
+    { kind: 'button', label: appText('protectStorage'), text: appText('protectButton'), hsv: [0.12, 1.4, 1], outline: 'rgb(25, 37, 74)', onClick: () => void protectStorage() },
     { ...RESET, label: s('RESET_DEFAULT'), text: s('RESET_SETTINGS_BUTTON'), onClick: () => void confirmReset('RESET_GAMEPLAY_CONFIRMATION.body', resetGeneral) },
   ];
 }

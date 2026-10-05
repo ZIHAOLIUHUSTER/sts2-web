@@ -53,6 +53,13 @@ export function importSaves() {
   };
   input.click();
 }
+export async function protectStorage() {
+  try {
+    const granted = await navigator.storage?.persist?.();
+    await confirmPopup({ header: appText('protectStorage'), body: appText(granted ? 'storageProtected' : 'storageNotProtected'), yes: loc('main_menu_ui', 'GENERIC_POPUP.confirm') });
+  } catch { notice('storageNotProtected'); }
+}
+
 /** Hold one writer per origin for this page's lifetime. Closing/reloading releases the browser lock. */
 export async function acquireSaveLock(): Promise<boolean> {
   if (!navigator.locks) return true;

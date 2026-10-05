@@ -50,6 +50,11 @@ try {
   assert.equal(backup.format, 'sts2-web-backup');
   for (const [p, s] of files.filter(([p]) => p.endsWith('current_run.save'))) assert.equal(backup.files.find(f => f.path === p).content, s);
   await page.screenshot({ path: out + '/backup-settings.png' });
+  await page.locator('.st-button').filter({ hasText: '申请保护' }).click();
+  await page.locator('.vpopup').waitFor();
+  await page.screenshot({ path: out + '/storage-protection.png' });
+  await page.locator('.vp-btn.yes').click();
+
   // Add a file that must disappear after a full snapshot restore.
   await page.evaluate(async () => { window.G.$.vfs.write('user://after-backup.save', '{}'); await window.G.$.vfs.flush(); });
   const choose = page.waitForEvent('filechooser');
