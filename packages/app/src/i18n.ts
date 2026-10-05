@@ -91,6 +91,8 @@ export function t(k: keyof typeof UI): string {
 const APP: Record<string, Record<string, string>> = {
   portPatchNotesHeader: { eng: 'Web Port Updates', zhs: '移植版更新' },
   storageFull: { eng: 'Saving failed. Your previous save is kept; check browser storage and try again.', zhs: '保存失败，已保留上一次存档。请检查浏览器存储后重试。' },
+  saveTabOpen: { eng: 'The game is open in another tab. Close that tab, then reload here to protect your saves.', zhs: '游戏已在另一个标签页打开。为保护存档，请先关闭那个页面，再重新载入。' },
+  reloadGame: { eng: 'Reload game', zhs: '重新载入游戏' },
   afterReload: { eng: 'Applies the next time the game loads.', zhs: '下次载入游戏时生效。' },
   noStorage: { eng: 'This browser blocks storage: progress lasts until the tab closes.', zhs: '浏览器禁止了本地存储：进度只保留到关闭页面为止。' },
   unofficial: { eng: 'Unofficial fan port, for learning only', zhs: '非官方正版，仅供学习使用' }, // ui/menu.tsx PortLinks
@@ -118,7 +120,7 @@ const APP: Record<string, Record<string, string>> = {
       + '好啦，让我们，在高塔的攀爬中相见！',
   },
 };
-export function appText(k: keyof typeof APP): string {
-  const lang = (() => { try { return G.LocManager.Instance.Language; } catch { return 'eng'; } })();
+export function appText(k: keyof typeof APP, language?: string): string {
+  const lang = language ?? (() => { try { return G.LocManager.Instance.Language; } catch { return 'eng'; } })();
   return APP[k][lang] ?? APP[k].eng;
 }

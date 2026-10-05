@@ -10,7 +10,7 @@ import { installFilters } from './filters';
 import { installBridge } from './bridge';
 import { unlockAll } from './flow';
 import { initAnalytics } from './analytics';
-import { saveMetadata } from './saves';
+import { acquireSaveLock, saveMetadata } from './saves';
 import './render/vfx-cards';
 import './render/vfx-attacks';
 import './render/vfx-misc';
@@ -157,6 +157,11 @@ async function boot() {
     console.error('save write failed', path, err);
     if (!warned) { warned = true; ui.toast = appText('storageFull'); invalidate(); }
   });
+  if (!await acquireSaveLock()) {
+    setRenderer(() => render(<div class="boot">{appText('saveTabOpen', lang)}<br /><button onClick={() => location.reload()}>{appText('reloadGame', lang)}</button></div>, root));
+    invalidate();
+    return;
+  }
   await $.vfs.mount(); // saves live in IndexedDB (localStorage ones migrate on first run)
   G.initGame({});
   // players only get Normal/Fast (NFastModeTickbox); Instant is a test mode in which some event animation loops spin
