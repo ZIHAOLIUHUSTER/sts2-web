@@ -145,12 +145,8 @@ void main() {
   return { fragment, blend, premul, uniforms, usesTime: /\bTIME\b/.test(s), screen, screenUV };
 }
 
-/** Compiles a program once on a private WebGL2 context: Pixi would only log a failure at draw time, every frame. */
-let testGl: WebGL2RenderingContext | null | undefined;
-function compiles(fragment: string): boolean {
-  if (testGl === undefined) testGl = document.createElement('canvas').getContext('webgl2');
-  const gl = testGl;
-  if (!gl) return false;
+/** Validate on the main renderer, without keeping another GPU context alive just for shader checks. */
+function compiles(gl: WebGLRenderingContext | WebGL2RenderingContext, fragment: string): boolean {
   const sh = (type: number, src: string) => { const x = gl.createShader(type)!; gl.shaderSource(x, src); gl.compileShader(x); return x; };
   const v = sh(gl.VERTEX_SHADER, VERTEX), f = sh(gl.FRAGMENT_SHADER, fragment);
   const p = gl.createProgram()!;
@@ -167,12 +163,17 @@ export function loadShader(src: string): Promise<GodotShader | null> {
   const rel = src.replace(/^res:\/\//, '').replace(/\.(tres|gdshader)$/, '.gdshader');
   let p = shaderCache.get(rel);
   if (!p) {
-    p = fetch(A + 'shaders/' + rel).then((r) => (r.ok ? r.text() : '')).then((code) => {
+    p = fetch(A + 'shaders/' + rel).then((r) => (r.ok ? r.text() : '')).then(async (code) => {
       if (!code) return null;
+      const { renderer, canvas } = await getApp();
+      if (!('gl' in renderer)) return null;
+      if (renderer.gl.isContextLost()) {
+        await new Promise<void>((resolve) => canvas.addEventListener('webglcontextrestored', () => resolve(), { once: true }));
+      }
       for (const floats of [false, true, 'cmp'] as const) {
         const t = translate(code, floats);
         if (!t) return null;
-        if (compiles(t.fragment)) return t;
+        if (compiles(renderer.gl, t.fragment)) return t;
       }
       console.debug('[shader] unsupported', rel);
       return null;

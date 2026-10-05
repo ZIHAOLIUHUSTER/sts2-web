@@ -284,7 +284,7 @@ const handApp = () => (appP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, autoStart: false, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('shop-hand');
-  fullView(a);
+  fullView(a, true);
   return a;
 })());
 const handLoads = new Map<string, Promise<boolean>>();

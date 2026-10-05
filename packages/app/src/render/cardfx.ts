@@ -165,11 +165,15 @@ export function overlayApp(key: string) {
     const a = new Application();
     await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, antialias: false, autoStart: false, resolution: renderResolution(), autoDensity: true });
     a.canvas.classList.add('card-fx');
-    fullView(a);
+    fullView(a, true);
     // additive onto a transparent canvas: keep dst alpha, so opaque-black textures (hammer_mark, impact circles) add
     // light over the DOM like Godot's opaque framebuffer instead of painting black (premultiplied rgb > a composites as add)
-    const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
-    if (gl && map) map.add = [gl.ONE, gl.ONE, gl.ZERO, gl.ONE];
+    const blend = () => {
+      const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
+      if (gl && map) map.add = [gl.ONE, gl.ONE, gl.ZERO, gl.ONE];
+    };
+    blend();
+    a.canvas.addEventListener('webglcontextrestored', blend);
     return a;
   })()));
   return p;

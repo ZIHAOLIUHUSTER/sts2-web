@@ -133,7 +133,7 @@ const creaturesApp = () => (appP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('go-creatures-canvas');
-  fullView(a);
+  fullView(a, true);
   return a;
 })());
 /**

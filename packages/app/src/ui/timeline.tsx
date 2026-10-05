@@ -821,10 +821,14 @@ const fxApp = () => (fxP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('tl-fx-canvas');
-  fullView(a);
+  fullView(a, true);
   // additive items add light but keep the (transparent) canvas alpha, so the page composites them as additive too
-  const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
-  if (gl && map) map.add = [gl.ONE, gl.ONE, gl.ZERO, gl.ONE, gl.FUNC_ADD, gl.FUNC_ADD];
+  const blend = () => {
+    const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
+    if (gl && map) map.add = [gl.ONE, gl.ONE, gl.ZERO, gl.ONE, gl.FUNC_ADD, gl.FUNC_ADD];
+  };
+  blend();
+  a.canvas.addEventListener('webglcontextrestored', blend);
   return a;
 })());
 function FxLayer() {

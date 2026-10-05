@@ -702,7 +702,7 @@ const mapApp = () => (appP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, antialias: false, autoStart: false, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('map-fx');
-  fullView(a);
+  fullView(a, true);
   return a;
 })());
 const spineLoads = new Map<string, Promise<boolean>>();

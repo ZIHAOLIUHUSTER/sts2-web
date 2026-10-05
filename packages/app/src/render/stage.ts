@@ -23,11 +23,13 @@ const loaded = new Map<string, Promise<boolean>>();
 
 /** WebGL without a GPU (hardware acceleration off, blocklisted driver) rasterizes on the CPU. */
 function softwareGL() {
+  let gl: WebGLRenderingContext | null = null;
   try {
-    const gl = document.createElement('canvas').getContext('webgl');
+    gl = document.createElement('canvas').getContext('webgl');
     const info = gl?.getExtension('WEBGL_debug_renderer_info');
     return /swiftshader|llvmpipe|software/i.test(String(info ? gl!.getParameter(info.UNMASKED_RENDERER_WEBGL) : ''));
   } catch { return false; }
+  finally { gl?.getExtension('WEBGL_lose_context')?.loseContext(); }
 }
 let soft = false;
 /** SettingsSave.FpsLimit (NFpsPaginator → Engine.MaxFps); 0 = uncapped. Software rendering is held at 30. */
@@ -50,8 +52,12 @@ export function getApp() {
       await a.init({ width: W, height: H, backgroundAlpha: 0, antialias: msaa && !soft && !mobileRendering, autoDensity: true, resolution: soft ? 0.5 : renderResolution() });
       app = fullView(a);
       // Godot's BLEND_MODE_SUB (dst − src) for CanvasItemMaterial blend_mode = 2 / render_mode blend_sub
-      const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
-      if (gl && map) map.subtract = [gl.ONE, gl.ONE, gl.ONE, gl.ONE, gl.FUNC_REVERSE_SUBTRACT, gl.FUNC_ADD];
+      const blend = () => {
+        const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
+        if (gl && map) map.subtract = [gl.ONE, gl.ONE, gl.ONE, gl.ONE, gl.FUNC_REVERSE_SUBTRACT, gl.FUNC_ADD];
+      };
+      blend();
+      a.canvas.addEventListener('webglcontextrestored', blend);
       applyFpsLimit();
       return a;
     })();

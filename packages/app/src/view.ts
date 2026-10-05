@@ -3,6 +3,7 @@
 // to the centre stays as written and what it anchors to an edge moves by ox / oy (style.css "anchors").
 import type { Application } from 'pixi.js';
 import { G } from './game';
+import { suspendWhenDetached } from './render/context';
 
 /**
  * w × h, and the frame's offset inside it: the visible rect is [−ox, 1920 + ox] × [−oy, 1080 + oy] (ox < 0 when narrower).
@@ -51,7 +52,11 @@ function place(a: Application) {
   a.stage.position.set(view.ox, view.oy);
 }
 /** A Pixi canvas over the whole viewport, drawing in frame coordinates (style.css .view-canvas places it). */
-export function fullView(a: Application) { apps.add(a); a.canvas.classList.add('view-canvas'); place(a); return a; }
+export function fullView(a: Application, auxiliary = false) {
+  apps.add(a); a.canvas.classList.add('view-canvas'); place(a);
+  if (auxiliary) suspendWhenDetached(a);
+  return a;
+}
 /** For layouts that keep what they computed from the viewport. */
 export function onViewChange(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
 
