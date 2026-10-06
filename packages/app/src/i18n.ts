@@ -119,6 +119,9 @@ const APP: Record<string, Record<string, string>> = {
   // ui/feedback.tsx: the feedback goes to the port, not to Mega Crit
   feedback: { eng: 'Feedback', zhs: '问题反馈' },
   feedbackPlaceholder: { eng: "Feedback here goes to this web port's author, not to Mega Crit. Up to 500 characters.", zhs: '这里的反馈会发给网页版作者，不会发给 Mega Crit。最多 500 字。' },
+  // ui/menu.tsx PortLinks, ui/disclaimer.tsx showQQGroupDialog: Chinese players only
+  qqGroup: { eng: 'QQ Group', zhs: 'QQ群' },
+  qqGroupBody: { eng: '[center]Welcome to join our QQ group to share and chat![/center]', zhs: '[center]欢迎加入QQ群分享交流！[/center]' },
   // ui/disclaimer.tsx: the port's own notice in place of the game's Early Access text
   aboutHeader: { eng: 'About This Project', zhs: '关于本项目' },
   aboutBody: {

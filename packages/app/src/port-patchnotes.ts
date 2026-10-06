@@ -2,9 +2,21 @@
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
     date: '2026_10_06',
-    eng: `[gold][b]Wiki[/b][/gold]
+    eng: `[gold][b]Performance[/b][/gold]
+• Halved the memory music takes on phones and tablets, making crashes and blank screens less likely.
+
+[gold][b]Community[/b][/gold]
+• With both the browser and the game in Chinese, a QQ Group button in the main menu's bottom-left corner shows the group's QR code.
+
+[gold][b]Wiki[/b][/gold]
 • Added a wiki at /wiki/ on this site, in English and Chinese: cards, relics, potions, powers, keywords, characters, monsters, encounters and events, with the numbers shown in game, filters and search.`,
-    zhs: `[gold][b]资料站[/b][/gold]
+    zhs: `[gold][b]性能[/b][/gold]
+• 手机和平板上音乐占用的内存减半，降低页面崩溃和白屏的概率。
+
+[gold][b]社区[/b][/gold]
+• 浏览器和游戏语言均为中文时，主菜单左下角新增「QQ群」按钮，点开可扫码加入玩家交流群。
+
+[gold][b]资料站[/b][/gold]
 • 本站新增 Wiki（/wiki/），提供中英文：卡牌、遗物、药水、能力、关键词、角色、怪物、遭遇战和事件，数值与游戏内一致，支持筛选和搜索。`,
   },
   {

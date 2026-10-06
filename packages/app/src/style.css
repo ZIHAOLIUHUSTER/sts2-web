@@ -81,6 +81,7 @@ button { font-family: var(--font); cursor: pointer; }
   color: var(--cream); text-decoration: none; text-shadow: 3px 2px 0 rgba(0, 0, 0, .25); opacity: .75; transform-origin: 0 32px; transition: opacity .3s, scale .3s cubic-bezier(0.16, 1, 0.3, 1); }
 .mm-github:hover { opacity: 1; scale: 1.04; transition: none; }
 .mm-github.mm-feedback { top: 936px; cursor: pointer; }
+.mm-github.mm-qq { top: 872px; cursor: pointer; }
 .mm-github svg { width: 36px; height: 36px; fill: currentColor; filter: drop-shadow(3px 2px 0 rgba(0, 0, 0, .25)); }
 .mm-notice { position: absolute; left: 1302px; top: 1020px; width: 600px; text-align: right; white-space: nowrap; font: 400 20px/24px var(--font); letter-spacing: 1px;
   color: var(--cream); text-shadow: 3px 2px 0 rgba(0, 0, 0, .25); pointer-events: none; }
@@ -895,6 +896,7 @@ button { font-family: var(--font); cursor: pointer; }
   color: #EFC851; -webkit-text-stroke: 8px #332D1A; paint-order: stroke fill; text-shadow: 6px 4px 0 rgba(0, 0, 0, .251); }
 .ea-desc { font: 400 26px 'Kreon', var(--font); letter-spacing: 1px; color: #FFF6E2; text-shadow: 3px 2px 0 rgba(0, 0, 0, .251); line-height: calc(1.26em - 1px); white-space: pre-wrap; }
 .ea-desc a { color: #87ceeb; pointer-events: auto; }
+.ea-img { align-self: center; width: 380px; border-radius: 18px; box-shadow: 3px 2px 0 rgba(0, 0, 0, .25); }
 .ea-proceed { position: absolute; left: 195px; top: 695px; width: 338px; height: 68px; cursor: pointer; }
 .ea-proceed.off { pointer-events: none; }
 .ea-proceed img { position: absolute; left: 29px; top: 0; width: 280px; height: 68px; }

@@ -18,12 +18,13 @@ import { Backdrop } from './backdrop';
 import { mainMenuBackdrop, setMenuBlur, setLogoAlpha } from '../render/scene';
 import { abandonRunPopup } from './modal';
 import { BackButton } from './buttons';
+import { reportEvent } from '../analytics';
 import { hsvFilter, tint } from '../filters';
 import { SettingsScreen } from './settings';
 import { CompendiumSubmenu } from './compendium-menu';
 import { CharSelect } from './charselect';
 import { transitionView } from './transition';
-import { showEarlyAccessDisclaimer, showAboutDialog } from './disclaimer';
+import { showEarlyAccessDisclaimer, showAboutDialog, showQQGroupDialog } from './disclaimer';
 import { openFeedback } from './feedback';
 
 const safe = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d; } };
@@ -283,13 +284,25 @@ function ProfileButton() {
 
 // ------------------------------------------------------------------ the port's own corners
 /**
- * Not in the game: feedback to the port's author and the source repository (bottom left, sounding like the profile button)
- * and what this is (bottom right, reopening the about dialog).
+ * Not in the game: feedback to the port's author, the source repository and, with both the browser and the game in
+ * Chinese, the QQ group (bottom left, sounding like the profile button) and what this is (bottom right, reopening the
+ * about dialog).
  */
 function PortLinks() {
   return (
     <>
+      {/^zh\b/i.test(navigator.language) && safe(() => G.LocManager.Instance.Language, '') === 'zhs' && (
+        <div class="mm-github mm-qq"
+          onPointerEnter={() => playOneShot('event:/sfx/ui/clicks/ui_hover')}
+          onPointerDown={(e) => { if (e.button === 0) playOneShot('event:/sfx/ui/clicks/ui_click'); }}
+          onClick={() => { reportEvent('qq_group_click'); showQQGroupDialog(); }}>
+          {/* Octicons people */}
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5.5a3.5 3.5 0 1 1 5.898 2.549 5.508 5.508 0 0 1 3.034 4.084.75.75 0 1 1-1.482.235 4 4 0 0 0-7.9 0 .75.75 0 0 1-1.482-.236A5.507 5.507 0 0 1 3.102 8.05 3.493 3.493 0 0 1 2 5.5ZM11 4a3.001 3.001 0 0 1 2.22 5.018 5.01 5.01 0 0 1 2.56 3.012.749.749 0 0 1-.885.954.752.752 0 0 1-.549-.514 3.507 3.507 0 0 0-2.522-2.372.75.75 0 0 1-.574-.73v-.352a.75.75 0 0 1 .416-.672A1.5 1.5 0 0 0 11 5.5.75.75 0 0 1 11 4Zm-5.5-.5a2 2 0 1 0-.001 3.999A2 2 0 0 0 5.5 3.5Z" /></svg>
+          {appText('qqGroup')}
+        </div>
+      )}
       <a class="mm-github" href="https://github.com/moonrailgun/sts2-web" target="_blank" rel="noopener"
+        onClick={() => reportEvent('github_click')}
         onPointerEnter={() => playOneShot('event:/sfx/ui/clicks/ui_hover')}
         onPointerDown={(e) => { if (e.button === 0) playOneShot('event:/sfx/ui/clicks/ui_click'); }}>
         {/* GitHub's mark (Octicons mark-github) */}

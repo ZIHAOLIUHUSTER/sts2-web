@@ -5,6 +5,7 @@
 // scatterer / nested-event / command instruments. A small timeline engine below plays them on Web Audio; an event
 // missing from events.json falls back to sample-name matching (logged once).
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { mobileRendering } from './render/quality';
 const BASE = 'assets/audio/';
 let files: string[] = [];
 /** Streams identical to one in another bank are stored once (tools/audio.py): bank path → stored file. */
@@ -58,12 +59,17 @@ async function fetchAudio(sample: string): Promise<ArrayBuffer> {
     }
   }
 }
+// Phones decode music (minutes per stem) at 24 kHz, half the PCM to keep: its streams sit 37 dB or more below their
+// level above 12 kHz, and a buffer source plays any rate in the 48 kHz context. Ambience keeps the full rate: steam and
+// water loops have real content up there.
+let decoder24k: OfflineAudioContext | undefined;
+const halfRate = (sample: string) => mobileRendering && /^(act\d_\w+|Master)\//.test(sample);
 async function loadBuffer(c: AudioContext, file: string): Promise<AudioBuffer> {
   // Keep event/index identities unchanged; aliases must resolve before selecting the physical format.
   let sample = aliases[file] ?? file;
   if (sample.endsWith('.ogg') && (useMp3 ??= !document.createElement('audio').canPlayType('audio/ogg; codecs="opus"'))) sample = sample.slice(0, -4) + '.mp3';
   const data = await fetchAudio(sample);
-  try { return await c.decodeAudioData(data); }
+  try { return await (halfRate(sample) ? (decoder24k ??= new OfflineAudioContext(1, 1, 24000)) : c).decodeAudioData(data); }
   catch (error) {
     // Some browsers advertise Ogg support without a working Web Audio decoder. Only decode failures
     // switch the session to MP3; network failures do not imply an unsupported codec.
