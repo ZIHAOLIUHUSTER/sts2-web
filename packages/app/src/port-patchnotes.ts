@@ -1,6 +1,13 @@
 /** Web port updates, newest first. Add both languages here; original game notes remain in assets/patch_notes. */
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
+    date: '2026_10_06',
+    eng: `[gold][b]Performance[/b][/gold]
+• Halved the memory music takes on phones and tablets, making crashes and blank screens less likely.`,
+    zhs: `[gold][b]性能[/b][/gold]
+• 手机和平板上音乐占用的内存减半，降低页面崩溃和白屏的概率。`,
+  },
+  {
     date: '2026_10_05',
     eng: `[gold][b]Save protection[/b][/gold]
 • Failed writes now preserve the previous save; Save and Quit waits for pending saves.
