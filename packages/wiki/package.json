@@ -1,0 +1,14 @@
+{
+  "name": "@sts2/wiki",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite-node src/build.ts"
+  },
+  "dependencies": {
+    "@sts2/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vite-node": "3.2.4"
+  }
+}

@@ -1,6 +1,6 @@
 # 部署文档
 
-本项目是纯静态页面，可以通过 Docker 或 Cloudflare Workers 部署。以下命令均在仓库根目录执行；本地运行和开发环境准备见[开发文档](development.md)。
+本项目是纯静态页面，可以通过 Docker 或 Cloudflare Workers 部署。`pnpm build` 的产物包含游戏和 `/wiki/` 资料站（约 3000 个页面），两者一起发布，不需要额外配置。以下命令均在仓库根目录执行；本地运行和开发环境准备见[开发文档](development.md)。
 
 ## Docker
 
