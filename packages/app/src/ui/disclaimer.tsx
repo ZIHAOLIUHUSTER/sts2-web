@@ -3,7 +3,8 @@
 // the header (Kreon Bold 40, auto-sized 28–40, gold) and the description (Kreon 26, auto-sized 18–26, cream) in a
 // 542-wide VBox (separation 24), with NDisclaimerProceedButton (reward_skip_button, hsv .48 / 1.5 / .8) at the bottom.
 // Proceed: the panel rises 1000 px (0.5 s Back In), then the flag is saved and the modal cleared.
-// Not in the game: the main menu's bottom-right notice (ui/menu.tsx PortLinks) reopens it via showAboutDialog.
+// Not in the game: the main menu's bottom-right notice (ui/menu.tsx PortLinks) reopens it via showAboutDialog, and the
+// same panel shows the QQ group's QR code to Chinese players (showQQGroupDialog).
 import { useRef, useState } from 'preact/hooks';
 import { G, $ } from '../game';
 import { imageUrl } from '../assets';
@@ -13,6 +14,7 @@ import { hsvFilter } from '../filters';
 import { RichText } from './richtext';
 import { useFit } from './card';
 import { openModal, closeModal, setPopupKeys } from './modal';
+import qqGroupQr from './qq-group.jpg';
 
 export function showEarlyAccessDisclaimer() {
   const s = G.SaveManager.Instance?.SettingsSave;
@@ -20,15 +22,15 @@ export function showEarlyAccessDisclaimer() {
   showAboutDialog();
 }
 
-export function showAboutDialog() { openModal(() => <Disclaimer />); }
+// the port's own notice (i18n.ts APP) stands in for EARLY_ACCESS_DISCLAIMER.header / description_mkb
+export function showAboutDialog() { openModal(() => <Disclaimer headerText={appText('aboutHeader')} descText={appText('aboutBody')} ea />); }
+export function showQQGroupDialog() { openModal(() => <Disclaimer headerText={appText('qqGroup')} descText={appText('qqGroupBody')} img={qqGroupQr} />); }
 
-function Disclaimer() {
+/** `ea`: closing saves SeenEaDisclaimer; `img` goes below the description. */
+function Disclaimer({ headerText, descText, ea, img }: { headerText: string; descText: string; ea?: boolean; img?: string }) {
   const panel = useRef<HTMLDivElement>(null), header = useRef<HTMLDivElement>(null), desc = useRef<HTMLDivElement>(null);
   const [st, setSt] = useState<'' | 'hover' | 'press'>('');
   const [closing, setClosing] = useState(false);
-  // the port's own notice (i18n.ts APP) stands in for EARLY_ACCESS_DISCLAIMER.header / description_mkb
-  const headerText = appText('aboutHeader');
-  const descText = appText('aboutBody');
   useFit(header, `ea-h|${headerText}`, 40, 28, (el) => el.scrollWidth <= 542);
   // the description fills the VBox below the header (680 − 64 − 24)
   useFit(desc, `ea-d|${descText}`, 26, 18, (el) => el.scrollHeight <= 592);
@@ -39,7 +41,7 @@ function Disclaimer() {
     t.TweenProperty(o, 'y', -1000, 0.5).SetEase(0).SetTrans(10);
     $.onFrame(() => { if (panel.current) panel.current.style.translate = `0 ${o.Y}px`; return t.IsValid(); });
     t.whenFinished(() => {
-      G.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
+      if (ea) G.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
       setPopupKeys({});
       closeModal();
     });
@@ -53,6 +55,7 @@ function Disclaimer() {
       <div class="ea-box">
         <div class="ea-header" ref={header}>{headerText}</div>
         <div class="ea-desc" ref={desc}><RichText text={descText} /></div>
+        {img && <img class="ea-img" src={img} />}
       </div>
       <div class={'ea-proceed' + (closing ? ' off' : '')} style={{ scale: String(scale), transition: tr }}
         onPointerEnter={() => { if (closing) return; setSt('hover'); playOneShot('event:/sfx/ui/clicks/ui_hover'); }}
