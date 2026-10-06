@@ -1,6 +1,7 @@
 // Tiny UI store: views mutate fields and call invalidate(); a rAF loop re-renders when dirty or while animating.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { $ } from './game';
+import { reportError } from './analytics';
 export type Screen = 'boot' | 'menu' | 'run' | 'gameover' | 'library' | 'relics' | 'potions' | 'history'
   | 'stats' | 'credits';
 export type MenuSubmenu = 'singleplayer' | 'charselect' | 'settings' | 'compendium' | 'timeline' | 'daily' | 'custom' | 'profile';
@@ -31,7 +32,7 @@ function loop(t: number) {
   if (dirty || (ui.live && t - lastRender >= LIVE_MS)) {
     dirty = false;
     lastRender = t;
-    try { render(); } catch (e) { console.error('render failed', e); }
+    try { render(); } catch (e) { console.error('render failed', e); reportError('render', e); }
   }
 }
 export function startLoop() { requestAnimationFrame(loop); }

@@ -9,7 +9,8 @@ import { sceneIndex } from './render/scene';
 import { installFilters } from './filters';
 import { installBridge } from './bridge';
 import { unlockAll } from './flow';
-import { initAnalytics } from './analytics';
+import { initAnalytics, reportError, trackUncleanExits } from './analytics';
+import { mobileRendering } from './render/quality';
 import { acquireSaveLock, saveMetadata } from './saves';
 import './render/vfx-cards';
 import './render/vfx-attacks';
@@ -162,6 +163,8 @@ async function boot() {
     invalidate();
     return;
   }
+  // after the lock: a second tab must not take the running one's mark for its own crash
+  trackUncleanExits(() => ({ screen: ui.screen, room: ui.room?.kind ?? null, mobile: mobileRendering, memory: (navigator as any).deviceMemory ?? null }));
   await $.vfs.mount(); // saves live in IndexedDB (localStorage ones migrate on first run)
   G.initGame({});
   // players only get Normal/Fast (NFastModeTickbox); Instant is a test mode in which some event animation loops spin
@@ -211,9 +214,12 @@ const swClaimed = !import.meta.env.PROD || !('serviceWorker' in navigator) ? nul
   });
 })();
 initAnalytics();
+window.addEventListener('error', (e) => reportError('uncaught', e.error ?? e.message));
+window.addEventListener('unhandledrejection', (e) => reportError('rejection', e.reason));
 function tryOr<T>(f: () => T, d: T) { try { return f() ?? d; } catch { return d; } }
 function safeGet(k: string) { try { return localStorage.getItem(k); } catch { return null; } }
 boot().catch((e) => {
   console.error(e);
+  reportError('boot', e);
   document.getElementById('app')!.innerHTML = `<pre class="fatal">${String(e?.stack ?? e)}</pre>`;
 });
