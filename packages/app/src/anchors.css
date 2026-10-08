@@ -41,6 +41,7 @@
 /* the port's own corners */
 .mm-github { margin-left: calc(-1 * var(--ox)); margin-top: var(--oy); }
 .mm-notice { margin-left: var(--ox); margin-top: var(--oy); }
+.mm-shutdown-notice { left: calc(32px - var(--ox)); right: calc(32px - var(--ox)); margin-top: calc(-1 * var(--oy)); }
 /* patch_screen_contents.tscn Content: C,T in the stretched ScreenContents (ui/patchnotes.tsx sizes the scroll area) */
 .pn-content { width: 100%; padding-left: calc(50% - 480px); }
 

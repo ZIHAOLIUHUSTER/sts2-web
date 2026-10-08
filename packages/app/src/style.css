@@ -46,6 +46,8 @@ button { font-family: var(--font); cursor: pointer; }
 .screen { position: absolute; inset: 0; }
 .menu { background: #000; }
 .menu > .stage-host { position: absolute; inset: 0; }
+.mm-shutdown-notice { position: absolute; top: 108px; left: 32px; right: 32px; padding: 16px 24px; border: 2px solid var(--gold); border-radius: 8px;
+  background: rgba(99, 25, 20, .94); color: #fff1c2; font: 700 28px/1.5 var(--font); text-align: center; box-shadow: 0 4px 20px rgba(0, 0, 0, .4); pointer-events: none; }
 /* NMainMenu (ui/menu.tsx): text buttons (MainMenuTextButtons), reticles, continue-run info, profile button, release label */
 .mm-buttons { position: absolute; left: 676.5px; width: 200px; }
 .mm-btn { position: relative; width: 200px; height: 50px; display: flex; justify-content: center; cursor: pointer; }

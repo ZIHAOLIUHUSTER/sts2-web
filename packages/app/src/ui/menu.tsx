@@ -74,6 +74,7 @@ export function MainMenu() {
       <Backdrop id="main-menu" build={mainMenuBackdrop} />
       {!top && (
         <>
+          <div class="mm-shutdown-notice" role="note"><b>{appText('shutdownNotice')}</b></div>
           <MainMenuTextButtons />
           <ProfileButton />
           <PatchNotes />
