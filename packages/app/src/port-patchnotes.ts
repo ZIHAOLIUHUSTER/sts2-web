@@ -3,9 +3,11 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
     date: '2026_10_08',
     eng: `[gold][b]Main menu[/b][/gold]
-• Added a prominent notice that the game will be taken offline soon due to copyright issues, reminding players to manage their progress.`,
+• Added a prominent notice that the game will be taken offline soon due to copyright issues, reminding players to manage their progress.
+• Added a Wiki entry to the main menu, opening this site's Wiki in a new tab.`,
     zhs: `[gold][b]主菜单[/b][/gold]
-• 新增醒目的下线提示：由于版权问题，游戏本体将会在近期下线，请注意管理自己的游戏进度。`,
+• 新增醒目的下线提示：由于版权问题，游戏本体将会在近期下线，请注意管理自己的游戏进度。
+• 主菜单新增 Wiki 入口，可在新标签页打开本站 Wiki。`,
   },
   {
     date: '2026_10_06',

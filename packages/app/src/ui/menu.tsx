@@ -97,12 +97,12 @@ export function MainMenu() {
 }
 
 // ------------------------------------------------------------------ text buttons
-interface Row { key: string; enabled: boolean; onClick: () => void; dot?: boolean }
+interface Row { key: string; label?: string; enabled: boolean; onClick: () => void; dot?: boolean }
 let continuing = false;
 
 /**
  * MainMenuTextButtons (VBox (642, 609)–(911, 1059), rows 200 × 50 centred vertically) in node order Continue,
- * Abandon Run, Singleplayer, Multiplayer, Timeline, Settings, Compendium (Quit is hidden on the web), with
+ * Abandon Run, Singleplayer, Multiplayer, Timeline, Settings, Compendium, Wiki (Quit is hidden on the web), with
  * RefreshButtons / UpdateTimelineButtonBehavior's visibility rules. Multiplayer stays disabled: no netcode.
  */
 function MainMenuTextButtons() {
@@ -127,6 +127,7 @@ function MainMenuTextButtons() {
     ...(timeline !== null ? [{ key: 'TIMELINE', enabled: timeline, dot, onClick: openTimeline }] : []),
     { key: 'SETTINGS', enabled: true, onClick: () => pushMenu('settings') },
     ...(compendium ? [{ key: 'COMPENDIUM', enabled: !forced, onClick: () => pushMenu('compendium') }] : []),
+    { key: 'WIKI', label: 'Wiki', enabled: true, onClick: () => { reportEvent('wiki_click'); window.open('/wiki', '_blank', 'noopener'); } },
   ];
   const top0 = 609 + (450 - 50 * rows.length) / 2;
   const retL = useRef<HTMLDivElement>(null), retR = useRef<HTMLDivElement>(null);
@@ -197,7 +198,7 @@ function MainMenuTextButton({ row, onFocus, onUnfocus, children }: { row: Row; o
       onPointerDown={(e) => { if (row.enabled && e.button === 0) { setSt('press'); playOneShot('event:/sfx/ui/clicks/ui_click'); } }}
       onPointerUp={(e) => { if (row.enabled && e.button === 0 && st === 'press') { setSt(hovered.current ? 'release' : ''); row.onClick(); } }}>
       <div class="mm-label" ref={lbl}>
-        {m(row.key)}
+        {row.label ?? m(row.key)}
         {row.dot && <img class="mm-dot" src={imageUrl('images/packed/common_ui/notification_dot2.png') ?? ''} />}
       </div>
       {children}
