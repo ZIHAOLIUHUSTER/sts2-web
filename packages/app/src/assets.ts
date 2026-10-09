@@ -86,3 +86,8 @@ export function frameUrl(f: Frame | null, onReady?: () => void): string | null {
   img.src = f.page;
   return null;
 }
+
+/** Chromium WebView before 120 requires the prefixed CSS image mask. Keep both in sync. */
+export function maskStyle(image: string) {
+  return { maskImage: image, WebkitMaskImage: image };
+}

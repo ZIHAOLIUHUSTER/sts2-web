@@ -70,10 +70,8 @@ export function CombatScreen({ view, visualOnly = false }: { view: any; visualOn
     // VFX nodes in NCombatUi draw among its (DOM) cards, in FX slots; CombatVfxContainer's under the combat UI
     const fx = new CardFxCanvas('combat', (n) => !!n && (view.Ui.IsAncestorOf(n) || view.CombatVfxContainer.IsAncestorOf(n)), (n) => view.Ui.IsAncestorOf(n));
     if (!visualOnly) void fx.mount(fxHost.current!);
-    let raf = 0;
-    const tick = () => { st.sync(); raf = requestAnimationFrame(tick); };
-    tick();
-    return () => { cancelAnimationFrame(raf); st.destroy(); fx.destroy(); };
+    // CombatStage sync follows Pixi's capped ticker, including background pause, rather than another 60 Hz loop.
+    return () => { st.destroy(); fx.destroy(); };
   }, [view]);
   usePointer(() => view.Ui?.Hand ?? null);
   const cs = view.combatState;

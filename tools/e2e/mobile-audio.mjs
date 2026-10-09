@@ -26,7 +26,7 @@ try {
     } });
   }, { sample, alias });
   await page.click('button');
-  await page.evaluate(() => window.audio.playOneShot('event:/test'));
+  await page.evaluate(() => window.audio.playLoop('event:/test', false));
   await page.waitForFunction(() => window.audio.audioState().sounding.length === 2);
   const before = await page.evaluate(() => window.audio.audioState());
   assert.equal(requests.length, 1, 'aliases share one decode');
@@ -34,10 +34,15 @@ try {
   assert.equal(before.cache.entries, 1);
   assert.ok(Math.abs(before.cache.bytes - before.sampleRate * 4 * 4) <= 4, 'cache counts resampled PCM at the AudioContext rate');
   assert.equal(before.cache.limit, 48 * 1024 * 1024);
+  assert.equal(before.activePCM.sources, 2);
+  assert.equal(before.activePCM.buffers, 1, 'aliased active sources share one PCM allocation');
+  assert.equal(before.activePCM.bytes, before.cache.bytes, 'active PCM is measured without multiplying aliases');
+  assert.equal(before.pendingDecodes, 0, 'finished decodes retain no in-flight entries');
   await page.evaluate(() => window.dispatchEvent(new Event('sts2-memory-pressure')));
   const cleared = await page.evaluate(() => window.audio.audioState());
   assert.equal(cleared.cache.bytes, 0);
   assert.equal(cleared.sounding.length, 2, 'memory pressure preserves playing sources');
+  assert.deepEqual(cleared.activePCM, before.activePCM, 'dropping the cache does not drop playing PCM');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await page.waitForFunction(() => window.audio.audioState().ctx === 'suspended');
   const frozen = await page.evaluate(() => window.audio.audioState().time);
@@ -46,5 +51,8 @@ try {
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
   await page.waitForFunction(() => window.audio.audioState().ctx === 'running');
   await page.waitForFunction((t) => window.audio.audioState().time > t, frozen);
+  await page.evaluate(() => window.audio.stopLoop('event:/test'));
+  await page.waitForFunction(() => window.audio.audioState().activePCM.sources === 0);
+  assert.deepEqual(await page.evaluate(() => window.audio.audioState().activePCM), { bytes: 0, buffers: 0, sources: 0 }, 'ended sources release all counted PCM');
   console.log(`OK mobile audio: one decode for two aliases, ${before.cache.bytes} PCM bytes released while playing, background clock frozen and resumed`);
 } finally { await browser.close(); }

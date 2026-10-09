@@ -5,7 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { G, $, list } from '../game';
 import { ui, invalidate, backstop } from '../store';
-import { frameByName, frameStyle, imageUrl, anyImage, atlasFrame } from '../assets';
+import { frameByName, frameStyle, imageUrl, anyImage, atlasFrame, maskStyle } from '../assets';
 import { playOneShot } from '../audio';
 import { loc } from '../i18n';
 import { RichText } from './richtext';
@@ -124,7 +124,7 @@ function RewardsScreen({ v }: { v: RewardsView }) {
           <div class="rw-header">{loc('gameplay_ui', mugged ? 'COMBAT_REWARD_HEADER_MUGGED' : 'COMBAT_REWARD_HEADER_LOOT')}</div>
         </div>
         {/* RewardContainerMask: the panel texture flipped both ways, tinted 0.31, clipping the list to its shape */}
-        <div class="rw-mask" style={{ maskImage: `url(${flipped(img('images/ui/reward_screen/reward_panel.png'))})` }}>
+        <div class="rw-mask" style={maskStyle(`url(${flipped(img('images/ui/reward_screen/reward_panel.png'))})`)}>
           <div class="rw-mask-bg" style={{ backgroundImage: `url(${flipped(img('images/ui/reward_screen/reward_panel.png'))})` }} />
           <div class="rw-list" ref={listEl} style={{ top: `${v.scroll.y}px` }}>
             {v.buttons.map((b) => (b instanceof G.LinkedRewardSet ? <LinkedSet v={v} set={b} key={b} /> : <RewardButton v={v} r={b} key={b} />))}

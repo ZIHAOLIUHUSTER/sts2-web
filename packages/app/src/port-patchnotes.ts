@@ -11,10 +11,14 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Hold a hand card to inspect it; drag to play as before.
 • Touch a shop item to preview it, then use the Buy button to avoid accidental purchases.
 • Improved phone fonts, reduced heavy text outlines, and enlarged card descriptions and tooltips.
+• Fixed solid blocks hiding map bosses, the starting node and drawing tools on older Android WebViews.
+• Kept the map scroll animation stable when a frame takes longer than usual.
 
 [gold][b]Performance[/b][/gold]
 • Limited retained decoded sound effects, shared duplicate audio, and released finished playback resources.
-• Paused audio and the main renderer while the game is in the background.`,
+• Paused audio and the main renderer while the game is in the background.
+• Made combat updates and skeleton animations follow the frame limit; stopped drawing detached room canvases.
+• Shared concurrent audio decoding without changing the music or effects.`,
     zhs: `[gold][b]Android[/b][/gold]
 • 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。
 • 安装包仅保留中英文并移除重复音频，缩小下载体积。
@@ -24,10 +28,14 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 长按手牌可查看详情，拖动仍按原方式出牌。
 • 触摸商店商品先预览，再点购买，减少误购。
 • 手机采用更清晰的字体，减少粗描边，放大卡牌描述和说明浮层。
+• 修复旧版 Android WebView 中地图 Boss、起点和绘图工具被实心色块遮住的问题。
+• 修复卡顿时地图滚动插值过冲，避免地图跳出屏幕。
 
 [gold][b]性能[/b][/gold]
 • 限制已解码音效缓存，共用重复音频，及时释放结束播放的资源。
-• 游戏切到后台时暂停声音和主画面渲染。`,
+• 游戏切到后台时暂停声音和主画面渲染。
+• 战斗更新和骨骼动画遵守帧率限制，不再绘制已经离开画面的房间画布。
+• 共用同时进行的音频解码，不改变音乐和音效内容。`,
   },
   {
     date: '2026_10_08',

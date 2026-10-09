@@ -6,7 +6,7 @@
 // missing from events.json falls back to sample-name matching (logged once).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { mobileRendering } from './render/quality';
-import { AudioBufferCache } from './audio-cache';
+import { AudioBufferCache, AudioDecodes, AudioPlaybackMemory } from './audio-cache';
 const BASE = 'assets/audio/';
 let files: string[] = [];
 /** Streams identical to one in another bank are stored once (tools/audio.py): bank path → stored file. */
@@ -54,6 +54,8 @@ function applyVolumes() {
 
 // Retain decoded audio within a PCM budget; active sources keep their own buffers until playback ends.
 const buffers = new AudioBufferCache((mobileRendering ? 48 : 128) * 1024 * 1024);
+const decodes = new AudioDecodes();
+const activePCM = new AudioPlaybackMemory();
 let useMp3: boolean | undefined;
 async function fetchAudio(sample: string): Promise<ArrayBuffer> {
   const url = BASE + sample.split('/').map(encodeURIComponent).join('/');
@@ -99,7 +101,9 @@ function buffer(file: string, keep: boolean): Promise<AudioBuffer | null> {
     console.warn(`[audio] Failed to load ${file}`, error);
     return null;
   });
-  return keep ? buffers.load(key, load) : load();
+  // In-flight loads survive cache eviction/pressure, but release their PCM immediately after decoding.
+  // This also shares uncached fallback music/ambience between overlapping event requests.
+  return keep ? buffers.load(key, () => decodes.load(key, load)) : decodes.load(key, load);
 }
 
 function play(file: string, out: GainNode | null, opts: { loop?: boolean; volume?: number; rate?: number } = {}) {
@@ -113,8 +117,9 @@ function play(file: string, out: GainNode | null, opts: { loop?: boolean; volume
     if (!b || h.stopped) { g.disconnect(); return; }
     const s = c.createBufferSource();
     s.buffer = b; s.loop = !!opts.loop; s.playbackRate.value = opts.rate ?? 1;
+    const release = activePCM.acquire(b);
+    s.onended = () => { release(); s.disconnect(); s.buffer = null; h.src = null; g.disconnect(); };
     s.connect(g); s.start();
-    s.onended = () => { s.disconnect(); s.buffer = null; h.src = null; g.disconnect(); };
     h.src = s;
   });
   return h;
@@ -295,7 +300,8 @@ function sampleVoice(host: Instance, file: string, t: number, offset: number, lo
     if (loop) off %= b.duration; else if (off >= b.duration) { done = true; return; }
     src = c.createBufferSource();
     src.buffer = b; src.loop = loop; src.playbackRate.value = rate;
-    src.connect(out); src.onended = () => { done = true; src?.disconnect(); if (src) src.buffer = null; sounding.set(file, (sounding.get(file) ?? 1) - 1); };
+    const release = activePCM.acquire(b);
+    src.connect(out); src.onended = () => { release(); done = true; src?.disconnect(); if (src) src.buffer = null; sounding.set(file, (sounding.get(file) ?? 1) - 1); };
     src.start(start, off); sounding.set(file, (sounding.get(file) ?? 0) + 1);
     if (stopAt < Infinity) src.stop(Math.max(stopAt, start));
   });
@@ -536,7 +542,9 @@ export function resolveSfx(event: string): string[][] {
 export function audioState() {
   const t = ctx?.currentTime ?? 0;
   return {
-    ctx: ctx?.state ?? 'none', sampleRate: ctx?.sampleRate ?? 0, time: t, cache: { entries: buffers.size, bytes: buffers.bytes, limit: buffers.limit }, globals: Object.fromEntries(globals), music: musicPath, ambience: ambPath,
+    ctx: ctx?.state ?? 'none', sampleRate: ctx?.sampleRate ?? 0, time: t, cache: { entries: buffers.size, bytes: buffers.bytes, limit: buffers.limit },
+    activePCM: { bytes: activePCM.bytes, buffers: activePCM.buffers, sources: activePCM.sources }, pendingDecodes: decodes.size,
+    globals: Object.fromEntries(globals), music: musicPath, ambience: ambPath,
     loops: [...loops.keys()], fallbacks: [...fellBack],
     instances: [...live].map((i) => ({ path: i.path, bus: i.ev.bus, nested: !!i.parent, stopped: i.stopped, pos: i.t0 < 0 ? 0 : +(i.pos(t) / RATE).toFixed(2), params: Object.fromEntries(i.params),
       tracks: Object.fromEntries([...i.tracks].map(([k, n]) => [k, +n.gain.value.toFixed(3)])) })),

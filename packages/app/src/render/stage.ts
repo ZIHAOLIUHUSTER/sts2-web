@@ -1,6 +1,6 @@
 // Pixi stage for combat: creatures as Spine skeletons placed per their creature_visuals scenes.
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { A, skelSrc, spineIndex } from '../assets';
 import { loadScene, attachCreatureFx, particleItem, buildScene, sceneTexture } from './scene';
@@ -40,6 +40,8 @@ export function applyFpsLimit() {
   if (!app) return;
   const limit = Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60) || 0;
   app.ticker.maxFPS = soft ? Math.min(limit || 30, 30) : limit;
+  // Spine and scene attachments default to the shared ticker: cap their work at the displayed frame rate too.
+  Ticker.shared.maxFPS = app.ticker.maxFPS;
 }
 export function getApp() {
   if (!appReady) {
@@ -51,6 +53,9 @@ export function getApp() {
       const msaa = Number(G.SaveManager.Instance?.SettingsSave?.Msaa ?? 2) > 0;
       await a.init({ width: W, height: H, backgroundAlpha: 0, antialias: msaa && !soft && !mobileRendering, autoDensity: true, resolution: soft ? 0.5 : renderResolution() });
       app = fullView(a);
+      // Keep the particle clock alive for auxiliary layers, but do not draw an unmounted combat/room canvas.
+      a.ticker.remove(a.render, a);
+      a.ticker.add(() => { if (a.canvas.isConnected && !document.hidden) a.render(); }, undefined, UPDATE_PRIORITY.LOW);
       // Godot's BLEND_MODE_SUB (dst − src) for CanvasItemMaterial blend_mode = 2 / render_mode blend_sub
       const blend = () => {
         const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
@@ -60,12 +65,22 @@ export function getApp() {
       a.canvas.addEventListener('webglcontextrestored', blend);
       applyFpsLimit();
       // Hidden WebViews need no GPU frames. Preserve the prior running state across background/foreground.
-      let resumeTicker = a.ticker.started, wasHidden = false;
+      let resumeTicker = a.ticker.started, resumeShared = Ticker.shared.started, wasHidden = false;
+      let resumeAutoStart = Ticker.shared.autoStart, sharedCount = Ticker.shared.count;
       const visibility = () => {
         if (document.hidden === wasHidden) return;
         wasHidden = document.hidden;
-        if (document.hidden) { resumeTicker = a.ticker.started; a.ticker.stop(); }
-        else if (resumeTicker) a.ticker.start();
+        if (document.hidden) {
+          resumeTicker = a.ticker.started; resumeShared = Ticker.shared.started;
+          resumeAutoStart = Ticker.shared.autoStart; sharedCount = Ticker.shared.count;
+          // A Spine asset may finish loading in the background and add an auto-starting listener.
+          Ticker.shared.autoStart = false;
+          a.ticker.stop(); Ticker.shared.stop();
+        } else {
+          Ticker.shared.autoStart = resumeAutoStart;
+          if (resumeTicker) a.ticker.start();
+          if (resumeShared || (resumeAutoStart && Ticker.shared.count > sharedCount)) Ticker.shared.start();
+        }
       };
       document.addEventListener('visibilitychange', visibility);
       if (document.hidden) visibility();
@@ -308,23 +323,30 @@ export class CombatStage {
   /** NCombatRoom.BackCombatVfxContainer: VFX drawn over the background, behind the creatures (render/vfx-misc). */
   backVfx = new Container();
   actors = new Map<any, Actor>();
+  private tick = () => this.sync();
+  private dead = false;
   constructor(public view: any) {
     this.root.addChild(this.bg, this.backVfx);
   }
   async mount(el: HTMLElement) {
+    if (this.dead) return;
     activeStage = this;
     const a = await getApp();
+    if (this.dead) return;
     a.stage.removeChildren();
     a.stage.addChild(this.root);
     el.appendChild(a.canvas);
+    a.ticker.add(this.tick);
   }
   unmount() {
+    app?.ticker.remove(this.tick);
     if (activeStage === this) activeStage = null;
     app?.stage.removeChild(this.root);
     app?.canvas.remove();
   }
   /** Spines tick on the shared ticker until destroyed. */
   destroy() {
+    this.dead = true;
     this.unmount();
     this.root.destroy({ children: true });
     this.actors.clear();

@@ -9,7 +9,7 @@ import { Application, Assets, ColorMatrixFilter, Container } from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { G, $, N, list } from '../game';
 import { ui, invalidate } from '../store';
-import { A, frameByName, frameStyle, imageUrl, skelSrc } from '../assets';
+import { A, frameByName, frameStyle, imageUrl, skelSrc, maskStyle } from '../assets';
 import { playOneShot } from '../audio';
 import { loc, locv } from '../i18n';
 import { setTip, setTips } from './tooltip';
@@ -436,12 +436,13 @@ function startLoop() {
 /** NMapScreen.UpdateScrollPosition. */
 function updateScroll(dt: number) {
   if (fx.MapY !== S.target) {
-    fx.MapY += (S.target - fx.MapY) * dt * 15;
+    // A slow mobile frame must not make lerp overshoot, throwing the paper off screen.
+    fx.MapY += (S.target - fx.MapY) * Math.min(1, dt * 15);
     if (Math.abs(fx.MapY - S.target) < 0.5) fx.MapY = S.target;
   }
   if (!S.dragging) {
-    if (S.target < -600) S.target += (-600 - S.target) * dt * 12;
-    else if (S.target > 1800) S.target += (1800 - S.target) * dt * 12;
+    if (S.target < -600) S.target += (-600 - S.target) * Math.min(1, dt * 12);
+    else if (S.target > 1800) S.target += (1800 - S.target) * Math.min(1, dt * 12);
   }
 }
 function paintFrame() {
@@ -828,7 +829,7 @@ function NormalPoint({ n, act }: { n: MapNode; act: any }) {
       onPointerEnter={() => focus(n)} onPointerLeave={() => unfocus(n)} onPointerDown={(e) => press(n, e)}>
       <div class="mp-ic" ref={(e) => { n.el = e; }}>
         <div class="mp-icon" style={{ transform: `scale(${scale})`, transition: tr('transform', 'scale') }}>
-          <div class="mp-outline" style={{ maskImage: url(plain('compressed', `map/${outline}_outline`)), backgroundColor: css(oc), transition: tr('background-color', 'outline') }} />
+          <div class="mp-outline" style={{ ...maskStyle(url(plain('compressed', `map/${outline}_outline`))), backgroundColor: css(oc), transition: tr('background-color', 'outline') }} />
           <div class="mp-img" style={{ backgroundImage: url(recoloured(icon, bg)), opacity: alpha, transition: tr('opacity', 'alpha') }} />
         </div>
         {quest && <div class="mp-quest" style={{ backgroundImage: url(imageUrl('images/packed/map/icons/map_spoils_map_marker.png')), transform: `scale(${scale})` }} />}
@@ -862,8 +863,8 @@ function AncientPoint({ n, act }: { n: MapNode; act: any }) {
     <div class={'mp mp-ancient' + (tv ? ' travelable' : '')} ref={(e) => { n.el = e; }} style={{ left: `${n.x}px`, top: `${n.y}px` }}
       onPointerEnter={() => focus(n)} onPointerLeave={() => unfocus(n)} onPointerDown={(e) => press(n, e)}>
       <div class="mp-anc-icon" style={{ transform: `scale(${scale})`, transition: tr('transform', 'scale') }}>
-        <div class="mp-anc-outline" style={{ maskImage: url(imageUrl(`images/packed/map/ancients/ancient_node_${id}_outline.png`)), backgroundColor: css(hov && tv ? OUTLINE_HOVER : act.MapBgColor), transition: tr('background-color', 'outline') }} />
-        <div class="mp-anc-img" style={{ maskImage: url(imageUrl(`images/packed/map/ancients/ancient_node_${id}.png`)), backgroundColor: css(color), transition: tr('background-color', 'alpha') }} />
+        <div class="mp-anc-outline" style={{ ...maskStyle(url(imageUrl(`images/packed/map/ancients/ancient_node_${id}_outline.png`))), backgroundColor: css(hov && tv ? OUTLINE_HOVER : act.MapBgColor), transition: tr('background-color', 'outline') }} />
+        <div class="mp-anc-img" style={{ ...maskStyle(url(imageUrl(`images/packed/map/ancients/ancient_node_${id}.png`))), backgroundColor: css(color), transition: tr('background-color', 'alpha') }} />
       </div>
     </div>
   );
@@ -878,8 +879,8 @@ function BossPoint({ n, act }: { n: MapNode; act: any }) {
       onPointerEnter={() => focus(n)} onPointerLeave={() => unfocus(n)} onPointerDown={(e) => press(n, e)}>
       {!spine && (
         <div class="mp-boss-sprite" ref={(e) => { n.el = e; }}>
-          <div class="mp-boss-outline" style={{ maskImage: url(imageUrl(path + '_outline.png')), backgroundColor: css(act.MapBgColor) }} />
-          <div class="mp-boss-img" style={{ maskImage: url(imageUrl(path + '.png')), backgroundColor: css(on ? act.MapTraveledColor : act.MapUntraveledColor) }} />
+          <div class="mp-boss-outline" style={{ ...maskStyle(url(imageUrl(path + '_outline.png'))), backgroundColor: css(act.MapBgColor) }} />
+          <div class="mp-boss-img" style={{ ...maskStyle(url(imageUrl(path + '.png'))), backgroundColor: css(on ? act.MapTraveledColor : act.MapUntraveledColor) }} />
         </div>
       )}
     </div>
@@ -926,7 +927,7 @@ function DrawingTools() {
       }} onPointerLeave={() => { setHot(''); setTip(null); }}
         onPointerDown={(e) => { if (e.button === 0) playOneShot('event:/sfx/ui/clicks/ui_click'); }}
         onPointerUp={(e) => { if (e.button === 0) onClick(); }}>
-        <div class="md-icon" style={{ maskImage: url(imageUrl(`images/packed/map/${img}${glow ? '_glow' : ''}.png`)), backgroundColor: lit ? color : '#FFFFFF80', transform: `scale(${hot === kind ? 1.2 : 1.1})` }} />
+        <div class="md-icon" style={{ ...maskStyle(url(imageUrl(`images/packed/map/${img}${glow ? '_glow' : ''}.png`))), backgroundColor: lit ? color : '#FFFFFF80', transform: `scale(${hot === kind ? 1.2 : 1.1})` }} />
       </div>
     );
   };

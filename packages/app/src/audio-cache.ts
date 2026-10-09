@@ -29,3 +29,45 @@ export class AudioBufferCache {
     return entry.promise;
   }
 }
+
+/** Share only work still in progress. Resolved PCM is owned by the cache and sources, never this map. */
+export class AudioDecodes {
+  private pending = new Map<string, Promise<AudioBuffer | null>>();
+  get size() { return this.pending.size; }
+  load(key: string, loader: () => Promise<AudioBuffer | null>) {
+    const old = this.pending.get(key);
+    if (old) return old;
+    const promise = Promise.resolve().then(loader).finally(() => {
+      if (this.pending.get(key) === promise) this.pending.delete(key);
+    });
+    this.pending.set(key, promise);
+    return promise;
+  }
+}
+
+/** Count unique PCM used by sources without adding any strong references to AudioBuffers. */
+export class AudioPlaybackMemory {
+  private ids = new WeakMap<AudioBuffer, number>();
+  private playing = new Map<number, { bytes: number; sources: number }>();
+  private nextId = 0;
+  bytes = 0;
+  sources = 0;
+  get buffers() { return this.playing.size; }
+  acquire(buffer: AudioBuffer) {
+    let id = this.ids.get(buffer);
+    if (id === undefined) { id = this.nextId++; this.ids.set(buffer, id); }
+    let entry = this.playing.get(id);
+    if (!entry) {
+      entry = { bytes: buffer.length * buffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT, sources: 0 };
+      this.playing.set(id, entry); this.bytes += entry.bytes;
+    }
+    entry.sources++; this.sources++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true; this.sources--;
+      const current = this.playing.get(id!);
+      if (current && --current.sources === 0) { this.bytes -= current.bytes; this.playing.delete(id!); }
+    };
+  }
+}

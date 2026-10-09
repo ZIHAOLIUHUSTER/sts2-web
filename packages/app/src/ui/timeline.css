@@ -12,7 +12,7 @@
 .tl-moved { position: absolute; top: -540px; width: 1920px; height: 1080px; }
 /* LineContainer: LeftFade 64, Line N·226, RightFade 64, centred on x 960, y 833–836, gold, through the noise mask */
 .tl-line-box { position: absolute; left: 960px; top: 833px; height: 3px; translate: -50% 0; display: flex; pointer-events: none;
-  mask-size: 256px 256px; -webkit-mask-size: 256px 256px; mask-repeat: repeat; }
+  mask-size: 256px 256px; -webkit-mask-size: 256px 256px; mask-repeat: repeat; -webkit-mask-repeat: repeat; }
 .tl-line { flex: 1; background: #E6C97A; }
 .tl-line-fade { flex: none; width: 64px; }
 .tl-line-fade.left { background: linear-gradient(to right, rgba(230, 201, 122, 0), #E6C97A); }

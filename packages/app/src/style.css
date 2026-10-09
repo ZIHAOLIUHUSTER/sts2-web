@@ -648,7 +648,7 @@ button { font-family: var(--font); cursor: pointer; }
 .mp-ic { position: absolute; inset: 0; transform-origin: 28px 28px; pointer-events: none; }
 .mp-icon { position: absolute; left: -18px; top: -18px; width: 92px; height: 92px; transform-origin: 46px 46px; }
 .mp-outline, .mp-img { position: absolute; inset: 0; }
-.mp-outline, .mp-anc-outline, .mp-anc-img, .mp-boss-outline, .mp-boss-img, .md-icon { mask-size: contain; mask-position: center; mask-repeat: no-repeat; }
+.mp-outline, .mp-anc-outline, .mp-anc-img, .mp-boss-outline, .mp-boss-img, .md-icon { mask-size: contain; mask-position: center; mask-repeat: no-repeat; -webkit-mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; }
 .mp-img { background: center / contain no-repeat; }
 .mp-quest { position: absolute; left: 32px; top: -24px; width: 48px; height: 48px; background: left top / contain no-repeat; transform-origin: 0 56px; }
 .mp-circle { position: absolute; left: -72px; top: -72px; width: 200px; height: 200px; rotate: var(--rot); scale: var(--s); opacity: .95; pointer-events: none; }
@@ -705,7 +705,7 @@ button { font-family: var(--font); cursor: pointer; }
 .rw-banner img { position: absolute; left: 0; top: 22.3px; width: 652px; height: 117.4px; }
 .rw-header { position: absolute; left: 141px; top: -9px; width: 370px; height: 139px; display: grid; place-items: center; white-space: nowrap;
   font: 700 44px 'Kreon', var(--font); letter-spacing: 2px; color: #FFF6E2; -webkit-text-stroke: 8px rgba(74, 60, 42, .75); paint-order: stroke fill; text-shadow: 6px 5px 0 rgba(0, 0, 0, .125); }
-.rw-mask { position: absolute; left: 26px; top: 103px; width: 474px; height: 484px; mask-size: 100% 100%; mask-repeat: no-repeat; }
+.rw-mask { position: absolute; left: 26px; top: 103px; width: 474px; height: 484px; mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; }
 .rw-mask-bg { position: absolute; inset: 0; background-size: 100% 100%; filter: brightness(.31); }
 .rw-list { position: absolute; left: 36px; width: 402px; display: flex; flex-direction: column; gap: 10px; }
 .rw-scrollbar { position: absolute; left: 512px; top: 140px; width: 45px; height: 445px; pointer-events: none; }
