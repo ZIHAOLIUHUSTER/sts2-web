@@ -47,7 +47,9 @@ export function useFit(ref: { current: HTMLElement | null }, key: string, max: n
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let size = fitCache.get(key);
+    // System UI fonts on touch devices have different metrics from the desktop game fonts.
+    const fontKey = `${key}|${max}|${getComputedStyle(el).fontFamily}`;
+    let size = fitCache.get(fontKey);
     if (size == null) {
       el.style.fontSize = `${max}px`;
       if (fits(el)) size = max;
@@ -56,7 +58,7 @@ export function useFit(ref: { current: HTMLElement | null }, key: string, max: n
         while (lo <= hi) { const mid = (lo + hi) >> 1; el.style.fontSize = `${mid}px`; if (fits(el)) lo = mid + 1; else hi = mid - 1; }
         size = Math.min(lo, hi);
       }
-      if (document.fonts?.status === 'loaded') fitCache.set(key, size);
+      if (document.fonts?.status === 'loaded') fitCache.set(fontKey, size);
     }
     el.style.fontSize = `${size}px`;
   });
@@ -156,8 +158,9 @@ export function Card({ card, pile, width = 300, target = null, mode, preview, vi
 
   const titleRef = useRef<HTMLDivElement>(null), descRef = useRef<HTMLDivElement>(null), costRef = useRef<HTMLDivElement>(null), starRef = useRef<HTMLDivElement>(null);
   const L = lang();
-  useFit(titleRef, `t|${L}|${title}`, 26, 8, (el) => (el.firstChild as HTMLElement).offsetWidth <= 210 && (el.firstChild as HTMLElement).offsetHeight <= 54);
-  useFit(descRef, `d|${L}|${desc}`, 21, 12, (el) => (el.firstChild as HTMLElement).offsetHeight <= 136);
+  const touch = matchMedia('(pointer: coarse)').matches;
+  useFit(titleRef, `t|${L}|${title}`, touch ? 28 : 26, 8, (el) => (el.firstChild as HTMLElement).offsetWidth <= 210 && (el.firstChild as HTMLElement).offsetHeight <= 54);
+  useFit(descRef, `d|${L}|${desc}`, touch ? 24 : 21, 12, (el) => (el.firstChild as HTMLElement).offsetHeight <= 136);
   const costText = !shown ? '?' : costsX ? 'X' : String(cost);
   useFit(costRef, `c|${costText}`, 32, 22, (el) => (el.firstChild as HTMLElement).offsetWidth <= 46);
   const starStr = starX ? 'X' : String(star);

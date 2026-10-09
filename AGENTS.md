@@ -112,6 +112,14 @@ packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下�
 - GitHub runner 用完整路径调用 SDK 工具：`"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"`。
 - 以任务成功、Release 非草稿、APK 附件已上传为完成；本地构建成功或标签已推送不足以说明发布完成。
 
+## 手机优化经验
+
+- 触屏用长按查看、拖动出牌；商店先预览再明确购买，不依赖右键或悬停。
+- 手机采用系统无衬线字体，避免粗描边；保留文字自适应，验证中英及横竖屏。
+- APK 只裁剪打包副本；中英与 Ogg 清单必须完整，保留动态场景/纹理/Wiki，音频格式以 `index.formats` 为准。
+- PCM 缓存按 `length × channels × 4` 计费，手机 48 MiB LRU；只移除缓存引用，不销毁活动音源。后台暂停，前台恢复。
+- 备份等系统写入成功再提示；发布须保留签名才能覆盖安装。签名遗失时保留玩家旧应用数据，不要求卸载清档。
+
 ## 提交
 
 提交信息用 Conventional Commits，scope 沿用现有的 `app` / `core` / `tools` / `assets`，例如 `fix(app): …`。

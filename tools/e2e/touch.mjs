@@ -44,8 +44,13 @@ const card = (name) => page.evaluate((name) => {
   return innerHeight > innerWidth ? { x: innerWidth - y, y: x } : { x, y };
 }, name);
 const idle = () => page.waitForFunction(() => !window.G.$.ext('MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom').Instance.Ui.Hand.currentPlay, null, { timeout: 2000 });
-const pick = async (name) => {
-  await touch('touchStart', await card(name));
+const pick = async (name, hold = false) => {
+  const at = await card(name);
+  if (hold) await touch('touchStart', at);
+  else {
+    // Queue the first movement without a browser roundtrip: a slow renderer must not turn a drag into a hold.
+    await Promise.all([touch('touchStart', at), touch('touchMove', { x: at.x + 15, y: at.y })]);
+  }
   assert.equal((await state()).playing, true, `${name} must be picked up`);
 };
 const check = async (name, run) => {
@@ -56,6 +61,10 @@ const check = async (name, run) => {
     // Restore input after a failing regression so subsequent checks are independent.
     await page.mouse.click(5, 270, { button: 'right' });
     await page.mouse.move(5, 5);
+    if (await page.locator('.inspect-screen').count()) {
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.inspect-screen', { state: 'detached' });
+    }
     await page.waitForTimeout(350);
   }
 };
@@ -82,6 +91,19 @@ try {
     await touch('touchEnd');
     await page.waitForTimeout(100);
     assert.equal(await page.locator('.hover-tip:visible').count(), 0, 'release must hide the description');
+  });
+  await check('hold-card-inspect', async () => {
+    const before = await state();
+    await pick('Bash', true);
+    await page.waitForSelector('.inspect-screen.card:not(.closing)');
+    await touch('touchEnd');
+    await page.waitForTimeout(100);
+    assert.ok(await page.locator('.inspect-screen.card:not(.closing)').count(), 'release must keep the readable preview open');
+    await idle();
+    assert.deepEqual(await state(), before, 'inspecting must not spend a card or energy');
+    await page.screenshot({ path: `${out}/held-card.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.inspect-screen', { state: 'detached' });
   });
   await check('tap-card', async () => {
     const before = await state();
@@ -157,6 +179,37 @@ try {
     assert.equal(after.energy, before.energy - 1);
     assert.notDeepEqual(await hp(), oldHp);
     await page.screenshot({ path: `${out}/played-attack.png` });
+  });
+  // Enter a shop using the supported developer console; no persistent player data is reused.
+  await page.keyboard.press('Backquote');
+  await page.locator('.dc-line input').fill('room Shop');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.merchant-btn');
+  await page.locator('.dc-line input').fill('gold 999');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.shop-blocker', { state: 'detached' });
+  await page.touchscreen.tap(...Object.values(await point('.merchant-btn')));
+  await page.waitForSelector('.shop-inv.open .shop-hit');
+  await page.waitForTimeout(800);
+  await check('shop-preview-before-buy', async () => {
+    const gold = () => page.evaluate(() => window.G.RunManager.Instance.State.Players[0].Gold);
+    const before = await gold();
+    await page.touchscreen.tap(...Object.values(await point('.shop-slot:has(.shop-card) .shop-hit')));
+    await page.waitForSelector('.shop-touch-buy');
+    assert.equal(await gold(), before, 'first touch must preview without buying');
+    await page.screenshot({ path: `${out}/shop-confirm.png` });
+    await page.touchscreen.tap(...Object.values(await point('.shop-touch-preview')));
+    await page.waitForSelector('.inspect-screen.card:not(.closing)');
+    assert.equal(await gold(), before, 'reading details must not buy');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.inspect-screen', { state: 'detached' });
+    await page.touchscreen.tap(...Object.values(await point('.shop-slot:has(.shop-card) .shop-hit')));
+    await page.waitForSelector('.shop-touch-buy');
+    await page.touchscreen.tap(...Object.values(await point('.shop-touch-buy')));
+    await page.waitForFunction((before) => window.G.RunManager.Instance.State.Players[0].Gold < before, before);
+    assert.ok(await gold() < before, 'explicit buy must spend gold');
+    assert.equal(await page.locator('.shop-touch-buy').count(), 0);
   });
   assert.deepEqual(errors, [], 'uncaught page errors');
   assert.deepEqual(failures, [], 'touch regressions');

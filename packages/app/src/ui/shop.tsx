@@ -141,6 +141,19 @@ function Slot({ view, e, at, hit, visual, children, tip, onPreview, disabled }: 
 }) {
   const [hot, setHotState] = useState(false);
   const hotRef = useRef(false);
+  const slotRef = useRef<HTMLDivElement>(null);
+  const [touchSelected, setTouchSelected] = useState(false);
+  const selectedRef = useRef(false);
+  const selectTouch = (v: boolean) => { selectedRef.current = v; setTouchSelected(v); };
+  useEffect(() => {
+    const outside = (ev: PointerEvent) => {
+      if (selectedRef.current && !slotRef.current?.contains(ev.target as Node)) {
+        selectTouch(false); setHot(false); setTip(null); view.stopPointing(2);
+      }
+    };
+    window.addEventListener('pointerdown', outside);
+    return () => window.removeEventListener('pointerdown', outside);
+  }, [view]);
   const setHot = (v: boolean) => { hotRef.current = v; setHotState(v); };
   useEffect(() => { if (disabled && hotRef.current) { setHot(false); setTip(null); } }, [disabled]);
   const vis = useRef<HTMLDivElement>(null);
@@ -151,10 +164,10 @@ function Slot({ view, e, at, hit, visual, children, tip, onPreview, disabled }: 
     vis.current.animate(frames, { duration: 400 });
   }, [wiggle]);
   const [x, y] = at;
-  const leave = () => { setHot(false); setTip(null); view.stopPointing(2); };
+  const leave = () => { if (selectedRef.current) return; setHot(false); setTip(null); view.stopPointing(2); };
   return (
-    <div class="shop-slot" ref={(el) => { if (el) view.slotEls.set(e, el); }}
-      style={{ left: `${x - 118}px`, top: `${y - 80}px`, scale: hot ? '0.8' : '0.65', transition: hot ? 'none' : `scale .5s ${EXPO_OUT}` }}>
+    <div class="shop-slot" ref={(el) => { slotRef.current = el; if (el) view.slotEls.set(e, el); }}
+      style={{ left: `${x - 118}px`, top: `${y - 80}px`, scale: hot ? '0.8' : '0.65', zIndex: touchSelected ? 5 : undefined, transition: hot ? 'none' : `scale .5s ${EXPO_OUT}` }}>
       <div class="shop-visual" ref={vis}>{visual}</div>
       {children}
       {!disabled && (
@@ -164,11 +177,26 @@ function Slot({ view, e, at, hit, visual, children, tip, onPreview, disabled }: 
           onPointerUp={async (ev) => {
             if (!hotRef.current) return;
             if (ev.button === 2) { setTip(null); onPreview?.(); return; }
-            if (ev.button !== 0) return;
+            if (ev.button !== 0 || !ev.isPrimary) return;
+            if (ev.pointerType === 'touch') { selectTouch(true); setHot(true); tip(); return; }
             setTip(null);
             await view.buy(e);
             if (safe(() => e.IsStocked, false) && hotRef.current) tip();
           }} />
+      )}
+      {touchSelected && !disabled && safe(() => e.IsStocked, false) && (
+        <div class="shop-touch-actions" style={{ position: 'absolute', left: '-155px', top: `${Math.max(130, hit[1] + hit[3] + 75)}px`, display: 'flex', gap: '8px', zIndex: 2 }} onPointerDown={(ev) => ev.stopPropagation()}>
+          <button class="shop-touch-buy" style={{ width: onPreview ? '190px' : '310px', minHeight: '88px', fontSize: '30px', fontFamily: 'inherit', color: '#FFF6E2', background: '#293c2b', border: '3px solid #d5b66b', borderRadius: '12px', zIndex: 2, cursor: 'pointer' }}
+            onClick={async () => {
+              selectTouch(false); setHot(false); setTip(null); view.stopPointing(2);
+              await view.buy(e);
+            }}>
+            {safe(() => G.LocManager.Instance.Language, 'eng') === 'zhs' ? '购买' : 'Buy'} · {safe(() => e.Cost, 0)}
+          </button>
+          {onPreview && <button class="shop-touch-preview" style={{ width: '112px', minHeight: '88px', fontSize: '28px', fontFamily: 'inherit', color: '#FFF6E2', background: '#28323f', border: '3px solid #d5b66b', borderRadius: '12px', cursor: 'pointer' }} onClick={() => { selectTouch(false); setHot(false); setTip(null); view.stopPointing(2); onPreview(); }}>
+            {safe(() => G.LocManager.Instance.Language, 'eng') === 'zhs' ? '详情' : 'Info'}
+          </button>}
+        </div>
       )}
     </div>
   );

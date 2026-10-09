@@ -6,7 +6,7 @@ on:
       tag:
         description: Android release tag
         required: true
-        default: android-v0.1.0
+        default: android-v0.2.0
   push:
     tags: ['android-*']
 
@@ -40,7 +40,7 @@ jobs:
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "Android APK · $RELEASE_TAG" \
-              --notes 'Android 首个测试 APK，内置游戏资源与 Wiki。Android 8.0+，请更新 Android System WebView。调试签名，尚未真机验证。请检查画面、音效、触控和保存后重新打开继续游戏。应用存档独立于浏览器；卸载或清除数据会删除存档。构建说明见 android/README.md，首版尚未实现 Blob 备份下载。'
+              --notes-file android/RELEASE_NOTES.md
           fi
-          gh release upload "$RELEASE_TAG" android/build/sts2-web-debug.apk android/build/sts2-web-debug.apk.sha256 --clobber
+          gh release upload "$RELEASE_TAG" android/build/sts2-web-debug.apk android/build/sts2-web-debug.apk.sha256
           gh release edit "$RELEASE_TAG" --draft=false --prerelease

@@ -13,13 +13,13 @@ test -f "$android_jar"
 if [[ "${SKIP_WEB_BUILD:-0}" != 1 ]]; then pnpm build; fi
 test -f packages/app/dist/index.html
 mkdir -p android/build/classes android/build/dex android/build/assets
-rm -rf android/build/assets/web
-cp -a packages/app/dist android/build/assets/web
+node android/prepare-assets.mjs
 find android/build/classes android/build/dex -type f -delete
-java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -bootclasspath "$android_jar" -d android/build/classes android/src/com/sts2web/game/MainActivity.java
+# Android's bundled stubs supply the Java 8 lambda factory; D8 desugars it for the target SDK.
+java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -bootclasspath "$android_jar:$tools_dir/core-lambda-stubs.jar" -d android/build/classes android/src/com/sts2web/game/MainActivity.java
 mapfile -t class_files < <(find android/build/classes -name '*.class')
 "$tools_dir/d8" --lib "$android_jar" --min-api 26 --output android/build/dex "${class_files[@]}"
-"$tools_dir/aapt" package -f -M android/AndroidManifest.xml -I "$android_jar" -A android/build/assets -0 '' -F android/build/unsigned.apk
+"$tools_dir/aapt" package -f -M android/AndroidManifest.xml -I "$android_jar" -A android/build/assets -F android/build/unsigned.apk
 (cd android/build/dex && zip -q ../unsigned.apk classes.dex)
 "$tools_dir/zipalign" -f 4 android/build/unsigned.apk android/build/aligned.apk
 # Retain this local debug key so subsequent builds can update this APK without clearing saves.

@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { G, $ } from '../game';
 import { imageUrl } from '../assets';
 import { Card } from './card';
+import { inspectCard } from './inspect';
 import { setTips, setTip, hoverTipsOf } from './tooltip';
 import { CardNodeView, HolderView, SelectedHolderView, HandView, arrow, mouse, targetManager, type Xf } from '../cardnodes';
 import { highlightImage } from '../render/highlight';
@@ -36,6 +37,24 @@ const safe = <T,>(f: () => T, d: T) => { try { return f(); } catch { return d; }
 const showIndices = () => { try { return !!G.SaveManager.Instance.PrefsSave.ShowCardIndices; } catch { return false; } };
 export function CardLayer({ root, hand, skip }: { root: any; hand?: HandView | null; skip?: any }) {
   const els = useRef(new Map<number, HTMLElement>());
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
+  const stopHold = () => { if (hold.current) clearTimeout(hold.current.timer); hold.current = null; };
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      if (hold.current && Math.hypot(e.clientX - hold.current.x, e.clientY - hold.current.y) > 10) stopHold();
+    };
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', stopHold, true);
+    window.addEventListener('pointercancel', stopHold, true);
+    window.addEventListener('blur', stopHold);
+    return () => {
+      stopHold();
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', stopHold, true);
+      window.removeEventListener('pointercancel', stopHold, true);
+      window.removeEventListener('blur', stopHold);
+    };
+  }, []);
   const entries = collect(root, skip);
   const live = useRef(entries);
   live.current = entries;
@@ -101,7 +120,20 @@ export function CardLayer({ root, hand, skip }: { root: any; hand?: HandView | n
               if (ev.button !== 0 || !ev.isPrimary) return;
               setTip(null);
               if (h instanceof SelectedHolderView) { playOneShot('event:/sfx/ui/clicks/ui_click'); h.container.DeselectHolder(h); }
-              else hand.press(h, ev.pointerType === 'touch');
+              else {
+                hand.press(h, ev.pointerType === 'touch');
+                // A stationary hold is the touch equivalent of inspecting a card. Dragging still plays it.
+                if (ev.pointerType === 'touch' && hand.currentPlay) {
+                  stopHold();
+                  const play = hand.currentPlay;
+                  hold.current = { x: ev.clientX, y: ev.clientY, timer: setTimeout(() => {
+                    hold.current = null;
+                    if (hand.currentPlay !== play || h.$freed) return;
+                    play.CancelPlayCard();
+                    inspectCard(hand.ActiveHolders.map((holder) => holder.CardNode?.Model).filter(Boolean), model);
+                  }, 650) };
+                }
+              }
             } : undefined}>
             <img class="holder-flash" src={imageUrl('images/packed/card_template/card_flash.png') ?? ''} style={{ display: 'none' }} />
             <div class="card-body">

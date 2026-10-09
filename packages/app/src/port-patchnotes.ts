@@ -3,9 +3,31 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
     date: '2026_10_09',
     eng: `[gold][b]Android[/b][/gold]
-• Added an experimental debug APK build for trying the web port on Android.`,
+• Added an experimental debug APK build for trying the web port on Android.
+• Reduced APK size by retaining Chinese and English and removing duplicate audio copies.
+• Backups in the Android app can be saved with the system document picker.
+
+[gold][b]Mobile controls and readability[/b][/gold]
+• Hold a hand card to inspect it; drag to play as before.
+• Touch a shop item to preview it, then use the Buy button to avoid accidental purchases.
+• Improved phone fonts, reduced heavy text outlines, and enlarged card descriptions and tooltips.
+
+[gold][b]Performance[/b][/gold]
+• Limited retained decoded sound effects, shared duplicate audio, and released finished playback resources.
+• Paused audio and the main renderer while the game is in the background.`,
     zhs: `[gold][b]Android[/b][/gold]
-• 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。`,
+• 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。
+• 安装包仅保留中英文并移除重复音频，缩小下载体积。
+• Android 应用可通过系统文件选择器保存存档备份。
+
+[gold][b]手机操作与文字[/b][/gold]
+• 长按手牌可查看详情，拖动仍按原方式出牌。
+• 触摸商店商品先预览，再点购买，减少误购。
+• 手机采用更清晰的字体，减少粗描边，放大卡牌描述和说明浮层。
+
+[gold][b]性能[/b][/gold]
+• 限制已解码音效缓存，共用重复音频，及时释放结束播放的资源。
+• 游戏切到后台时暂停声音和主画面渲染。`,
   },
   {
     date: '2026_10_08',

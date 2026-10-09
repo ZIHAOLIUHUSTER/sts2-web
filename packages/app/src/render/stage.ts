@@ -59,6 +59,16 @@ export function getApp() {
       blend();
       a.canvas.addEventListener('webglcontextrestored', blend);
       applyFpsLimit();
+      // Hidden WebViews need no GPU frames. Preserve the prior running state across background/foreground.
+      let resumeTicker = a.ticker.started, wasHidden = false;
+      const visibility = () => {
+        if (document.hidden === wasHidden) return;
+        wasHidden = document.hidden;
+        if (document.hidden) { resumeTicker = a.ticker.started; a.ticker.stop(); }
+        else if (resumeTicker) a.ticker.start();
+      };
+      document.addEventListener('visibilitychange', visibility);
+      if (document.hidden) visibility();
       return a;
     })();
   }

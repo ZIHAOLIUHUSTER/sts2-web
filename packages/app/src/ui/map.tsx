@@ -473,6 +473,7 @@ function toStage(e: { clientX: number; clientY: number }) {
 }
 let lastY = 0;
 function onPointerDown(e: PointerEvent) {
+  if (!e.isPrimary) return;
   const [x, y] = toStage(e);
   lastY = y;
   // NMapScreen.ProcessMouseDrawingEvent: right drags draw, middle drags erase, at any time
@@ -498,6 +499,7 @@ function onPointerDown(e: PointerEvent) {
   } else S.dragging = false;
 }
 function onPointerMove(e: PointerEvent) {
+  if (!e.isPrimary) return;
   const [x, y] = toStage(e);
   const dy = y - lastY;
   lastY = y;
@@ -508,6 +510,7 @@ function onPointerMove(e: PointerEvent) {
   if (p && !p.cancelled && Math.hypot(x - p.x, y - p.y) > (p.n.kind === 'normal' ? 20 : 30)) p.cancelled = true;
 }
 function onPointerUp(e: PointerEvent) {
+  if (!e.isPrimary) return;
   if (S.held && ((S.mode === 'draw' && e.button === 2) || (S.mode === 'erase' && e.button === 1))) { stopDrawing(); return; }
   if (S.mode !== 'none' && e.button === 0) { drawings.end(); return; }
   S.dragging = false;
@@ -522,6 +525,13 @@ function onWheel(e: WheelEvent) {
 }
 window.addEventListener('pointermove', (e) => { if (S.visible) onPointerMove(e); });
 window.addEventListener('pointerup', (e) => { if (S.visible) onPointerUp(e); });
+function cancelPointer() {
+  S.dragging = false; S.press = null;
+  if (S.line) drawings.end();
+  if (S.held) stopDrawing();
+}
+window.addEventListener('pointercancel', (e) => { if (S.visible && e.isPrimary) cancelPointer(); });
+window.addEventListener('blur', () => { if (S.visible) cancelPointer(); });
 
 // NMapPoint focus / press / release
 function focus(n: MapNode) {
@@ -552,7 +562,7 @@ function unfocus(n: MapNode) {
   invalidate();
 }
 function press(n: MapNode, e: PointerEvent) {
-  if (e.button !== 0) return;
+  if (!e.isPrimary || e.button !== 0) return;
   const [x, y] = toStage(e);
   S.press = { n, x, y, cancelled: false };
   if (!travelable(n)) return;

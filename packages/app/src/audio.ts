@@ -6,10 +6,12 @@
 // missing from events.json falls back to sample-name matching (logged once).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { mobileRendering } from './render/quality';
+import { AudioBufferCache } from './audio-cache';
 const BASE = 'assets/audio/';
 let files: string[] = [];
 /** Streams identical to one in another bank are stored once (tools/audio.py): bank path → stored file. */
 let aliases: Record<string, string> = {};
+let formats: string[] | undefined;
 let ctx: AudioContext | null = null;
 const bus: Record<'master' | 'music' | 'sfx' | 'amb', GainNode | null> = { master: null, music: null, sfx: null, amb: null };
 const vols = { master: 0.5, music: 0.5, sfx: 0.5, amb: 0.5 };
@@ -18,13 +20,22 @@ export async function loadAudioIndex() {
   try {
     const idx = await (await fetch(BASE + 'index.json')).json();
     aliases = idx.aliases ?? {};
+    formats = idx.formats;
     files = [...idx.files, ...Object.keys(aliases)].sort();
   } catch { files = []; }
   try { db = JSON.parse((await import('../../../assets/audio/events.json?raw')).default); } catch { db = null; } // a js/ chunk, see loadAssetIndex
   (window as any).__audio = audioState;
-  const unlock = () => { ensureCtx()?.resume(); };
+  const unlock = () => { if (!document.hidden) ensureCtx()?.resume(); };
   window.addEventListener('pointerdown', unlock, true);
   window.addEventListener('keydown', unlock, true);
+  // Freeze Web Audio's own timeline in the background; do not change volumes or restart event instances.
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    const c = ctx;
+    const update = () => document.hidden ? c.suspend() : c.resume();
+    update().then(() => { if ((c.state === 'suspended') !== document.hidden) return update(); }).catch(() => {});
+  });
+  window.addEventListener('sts2-memory-pressure', () => buffers.clear());
 }
 function ensureCtx(): AudioContext | null {
   if (ctx) return ctx;
@@ -41,8 +52,8 @@ function applyVolumes() {
   for (const k of ['master', 'music', 'sfx', 'amb'] as const) bus[k]!.gain.value = vols[k] ** 2;
 }
 
-// Short SFX stay decoded; music/ambience stems (minutes of PCM each) are decoded per use so they can be freed.
-const buffers = new Map<string, Promise<AudioBuffer | null>>();
+// Retain decoded audio within a PCM budget; active sources keep their own buffers until playback ends.
+const buffers = new AudioBufferCache((mobileRendering ? 48 : 128) * 1024 * 1024);
 let useMp3: boolean | undefined;
 async function fetchAudio(sample: string): Promise<ArrayBuffer> {
   const url = BASE + sample.split('/').map(encodeURIComponent).join('/');
@@ -67,31 +78,30 @@ const halfRate = (sample: string) => mobileRendering && /^(act\d_\w+|Master)\//.
 async function loadBuffer(c: AudioContext, file: string): Promise<AudioBuffer> {
   // Keep event/index identities unchanged; aliases must resolve before selecting the physical format.
   let sample = aliases[file] ?? file;
-  if (sample.endsWith('.ogg') && (useMp3 ??= !document.createElement('audio').canPlayType('audio/ogg; codecs="opus"'))) sample = sample.slice(0, -4) + '.mp3';
+  if (sample.endsWith('.ogg') && formats?.includes('mp3') !== false && (useMp3 ??= !document.createElement('audio').canPlayType('audio/ogg; codecs="opus"'))) sample = sample.slice(0, -4) + '.mp3';
   const data = await fetchAudio(sample);
   try { return await (halfRate(sample) ? (decoder24k ??= new OfflineAudioContext(1, 1, 24000)) : c).decodeAudioData(data); }
   catch (error) {
     // Some browsers advertise Ogg support without a working Web Audio decoder. Only decode failures
     // switch the session to MP3; network failures do not imply an unsupported codec.
     if (!sample.endsWith('.ogg')) throw error;
+    if (formats?.includes('mp3') === false) throw new Error('Ogg audio decoding failed. Update Android System WebView to play audio.', { cause: error });
     useMp3 = true;
     return loadBuffer(c, file);
   }
 }
 function buffer(file: string, keep: boolean): Promise<AudioBuffer | null> {
-  let p = buffers.get(file);
-  if (!p) {
-    const c = ensureCtx();
-    if (!c) return Promise.resolve(null);
-    p = loadBuffer(c, file).catch((error) => {
-      if (buffers.get(file) === p) buffers.delete(file); // a later playback can try again
-      console.warn(`[audio] Failed to load ${file}`, error);
-      return null;
-    });
-    if (keep) buffers.set(file, p);
-  }
-  return p;
+  const c = ensureCtx();
+  if (!c) return Promise.resolve(null);
+  // Aliased bank samples share one decode, rather than keeping duplicate PCM under different event names.
+  const key = aliases[file] ?? file;
+  const load = () => loadBuffer(c, key).catch((error) => {
+    console.warn(`[audio] Failed to load ${file}`, error);
+    return null;
+  });
+  return keep ? buffers.load(key, load) : load();
 }
+
 function play(file: string, out: GainNode | null, opts: { loop?: boolean; volume?: number; rate?: number } = {}) {
   const c = ensureCtx();
   if (!c || !out) return null;
@@ -100,10 +110,11 @@ function play(file: string, out: GainNode | null, opts: { loop?: boolean; volume
   g.connect(out);
   const h = { src: null as AudioBufferSourceNode | null, gain: g, stopped: false };
   buffer(file, out === bus.sfx).then((b) => {
-    if (!b || h.stopped) return;
+    if (!b || h.stopped) { g.disconnect(); return; }
     const s = c.createBufferSource();
     s.buffer = b; s.loop = !!opts.loop; s.playbackRate.value = opts.rate ?? 1;
     s.connect(g); s.start();
+    s.onended = () => { s.disconnect(); s.buffer = null; h.src = null; g.disconnect(); };
     h.src = s;
   });
   return h;
@@ -261,7 +272,11 @@ function voice(host: Instance, ins: Ins | null, t: number, offset: number, out: 
   };
   const rel = (ins.rel ?? 0) / 1000;
   const v: Voice = {
-    alive: () => inner.alive() && c.currentTime < endAt,
+    alive: () => {
+      const alive = inner.alive() && c.currentTime < endAt;
+      if (!alive) { fade.disconnect(); g.disconnect(); auto?.disconnect(); }
+      return alive;
+    },
     end,
     untrigger: (t2) => (rel ? end(t2, rel) : inner.untrigger(t2)),
     fadeOut: (t2) => (rel ? end(t2, rel) : inner.fadeOut(t2)),
@@ -280,7 +295,7 @@ function sampleVoice(host: Instance, file: string, t: number, offset: number, lo
     if (loop) off %= b.duration; else if (off >= b.duration) { done = true; return; }
     src = c.createBufferSource();
     src.buffer = b; src.loop = loop; src.playbackRate.value = rate;
-    src.connect(out); src.onended = () => { done = true; src?.disconnect(); sounding.set(file, (sounding.get(file) ?? 1) - 1); };
+    src.connect(out); src.onended = () => { done = true; src?.disconnect(); if (src) src.buffer = null; sounding.set(file, (sounding.get(file) ?? 1) - 1); };
     src.start(start, off); sounding.set(file, (sounding.get(file) ?? 0) + 1);
     if (stopAt < Infinity) src.stop(Math.max(stopAt, start));
   });
@@ -346,7 +361,7 @@ class Instance {
     this.cursor = !!ev.len; this.syncSet = new Set(ev.sync); this.allPlaced = [...(ev.sync ?? []), ...(ev.async ?? [])];
     for (const k of Object.keys(ev.tracks ?? {})) this.track(k);
     live.add(this);
-    ticker ??= setInterval(() => { for (const i of [...live]) i.update(); if (!live.size) { clearInterval(ticker); ticker = undefined; } }, TICK);
+    ticker ??= setInterval(() => { if (!document.hidden) for (const i of [...live]) i.update(); if (!live.size) { clearInterval(ticker); ticker = undefined; } }, TICK);
   }
   get(n: string): number { return this.params.get(n) ?? (this.parent ? this.parent.get(n) : globals.get(n) ?? db?.params[n]?.default ?? 0); }
   setParam(n: string, v: number) {
@@ -480,9 +495,9 @@ class Instance {
   }
   dispose() {
     this.done = true; live.delete(this);
-    setTimeout(() => this.out.disconnect(), 100);
-    // music / ambience stems are minutes of PCM: drop them once no live instance uses them
-    for (const f of this.files) buffers.get(f)?.then((b) => { if (b && b.duration > 20 && ![...live].some((i) => i.files.has(f))) buffers.delete(f); });
+    setTimeout(() => { this.out.disconnect(); for (const track of this.tracks.values()) track.disconnect(); this.tracks.clear(); }, 100);
+    // Do not retain minutes of music after their event has ended.
+    for (const f of this.files) if (!/^sfx\//.test(f) && ![...live].some((i) => i.files.has(f))) buffers.delete(aliases[f] ?? f);
   }
 }
 function setGlobal(n: string, v: number) { globals.set(n, v); for (const i of [...live]) i.update(); }
@@ -521,7 +536,7 @@ export function resolveSfx(event: string): string[][] {
 export function audioState() {
   const t = ctx?.currentTime ?? 0;
   return {
-    ctx: ctx?.state ?? 'none', time: t, globals: Object.fromEntries(globals), music: musicPath, ambience: ambPath,
+    ctx: ctx?.state ?? 'none', sampleRate: ctx?.sampleRate ?? 0, time: t, cache: { entries: buffers.size, bytes: buffers.bytes, limit: buffers.limit }, globals: Object.fromEntries(globals), music: musicPath, ambience: ambPath,
     loops: [...loops.keys()], fallbacks: [...fellBack],
     instances: [...live].map((i) => ({ path: i.path, bus: i.ev.bus, nested: !!i.parent, stopped: i.stopped, pos: i.t0 < 0 ? 0 : +(i.pos(t) / RATE).toFixed(2), params: Object.fromEntries(i.params),
       tracks: Object.fromEntries([...i.tracks].map(([k, n]) => [k, +n.gain.value.toFixed(3)])) })),

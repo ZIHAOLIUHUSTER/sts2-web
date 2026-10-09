@@ -3,6 +3,7 @@ import { appText, loc } from './i18n';
 import { ui, invalidate } from './store';
 import { confirmPopup } from './ui/modal';
 import { reportEvent, flushAnalytics } from './analytics';
+import { exportAndroidBackup } from './android';
 
 /** Save metadata without replacing the run's room-entry checkpoint. */
 export function saveMetadata() {
@@ -18,10 +19,13 @@ async function downloadBackup() {
   try { await $.vfs.flush(); } catch (e) { console.warn('Exporting previous saves', e); }
   const files = $.vfs.list('user://').filter((p: string) => !p.endsWith('.tmp')).sort().map((p: string) => [p, $.vfs.read(p)!] as [string, string]);
   const text = await G.encodeBackup(files);
+  const filename = `sts2-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  const native = exportAndroidBackup(filename, text);
+  if (native) { await native; return; }
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `sts2-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
@@ -29,7 +33,7 @@ export async function exportSaves() {
   if (busy) return;
   busy = true;
   try { await downloadBackup(); notice('backupExported'); reportEvent('save_export'); }
-  catch (e) { console.error(e); notice('backupFailed'); }
+  catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) { console.error(e); notice('backupFailed'); } }
   finally { busy = false; }
 }
 export function importSaves() {
@@ -51,7 +55,7 @@ export function importSaves() {
       reportEvent('save_import');
       await flushAnalytics();
       location.reload();
-    } catch (e) { console.error(e); notice('backupFailed'); }
+    } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) { console.error(e); notice('backupFailed'); } }
     finally { busy = false; }
   };
   input.click();

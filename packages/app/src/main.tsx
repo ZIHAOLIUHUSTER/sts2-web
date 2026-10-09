@@ -4,7 +4,7 @@ import { G, $ } from './game';
 import { ui, setRenderer, startLoop, invalidate, type Screen } from './store';
 import { DevConsole } from './ui/devconsole'; // before the modules below: its key listener must be the first one registered
 import { loadAssetIndex } from './assets';
-import { preloadLocalization, addListedFiles, appText } from './i18n';
+import { preloadLocalization, addListedFiles, appText, normalizeLanguage } from './i18n';
 import { sceneIndex } from './render/scene';
 import { installFilters } from './filters';
 import { installBridge } from './bridge';
@@ -148,7 +148,7 @@ async function boot() {
   installFilters();
   // tables must be fetched before init; the last chosen language is mirrored outside the (not yet loaded) SettingsSave,
   // and until one is chosen the device's language applies
-  const lang = new URLSearchParams(location.search).get('lang') ?? safeGet('sts2web.lang') ?? G.platformLanguage(navigator.languages);
+  const lang = normalizeLanguage(new URLSearchParams(location.search).get('lang') ?? safeGet('sts2web.lang') ?? G.platformLanguage(navigator.languages));
   await swClaimed;
   await Promise.all([loadAssetIndex(), preloadLocalization(lang === 'eng' ? ['eng'] : ['eng', lang]), sceneIndex().then(addListedFiles), loadAudioIndex()]);
   $.setGodotLogSink((level: string, msg: string) => (level === 'error' ? console.error(msg) : level === 'warn' ? console.warn(msg) : undefined));

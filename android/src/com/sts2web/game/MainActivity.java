@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -17,15 +19,20 @@ import android.webkit.WebViewClient;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.nio.charset.StandardCharsets;
+import java.io.OutputStream;
+import org.json.JSONObject;
 
 /** A local HTTPS origin keeps fetch, WebGL and IndexedDB working without changing the game. */
 public final class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private WebView web;
     private ValueCallback<Uri[]> fileChooser;
+    private byte[] backupData;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         web = new WebView(this);
         web.setBackgroundColor(0xff000000);
         setContentView(web);
@@ -35,6 +42,7 @@ public final class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        web.addJavascriptInterface(new BackupBridge(), "Sts2Android");
         WebView.setWebContentsDebuggingEnabled(true); // This first APK is a debug build.
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -101,10 +109,56 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == 2 && backupData != null) {
+            final byte[] bytes = backupData;
+            backupData = null;
+            if (result != RESULT_OK || data == null || data.getData() == null) {
+                backupResult("cancelled");
+                return;
+            }
+            final Uri uri = data.getData();
+            new Thread(() -> {
+                String error = "";
+                try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                    if (out == null) throw new IOException("Cannot open backup destination");
+                    out.write(bytes);
+                } catch (IOException | RuntimeException e) { error = "write failed"; }
+                final String resultError = error;
+                runOnUiThread(() -> backupResult(resultError));
+            }, "save-backup").start();
+            return;
+        }
         if (request == 1 && fileChooser != null) {
             fileChooser.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
             fileChooser = null;
         }
+    }
+
+    /** Only the packaged page can navigate inside this WebView; no filesystem path is exposed to JS. */
+    public final class BackupBridge {
+        @JavascriptInterface public void exportBackup(String filename, String json) {
+            runOnUiThread(() -> {
+                if (backupData != null) return;
+                backupData = json.getBytes(StandardCharsets.UTF_8);
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                intent.putExtra(Intent.EXTRA_TITLE, filename.replaceAll("[^a-zA-Z0-9._-]", "_"));
+                try { startActivityForResult(intent, 2); }
+                catch (RuntimeException e) { backupData = null; backupResult("no file picker"); }
+            });
+        }
+    }
+
+    private void backupResult(String error) {
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('sts2-backup-result',{detail:"
+            + JSONObject.quote(error) + "}))", null);
+    }
+
+    @Override public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (web != null && level >= TRIM_MEMORY_RUNNING_LOW)
+            web.evaluateJavascript("window.dispatchEvent(new Event('sts2-memory-pressure'))", null);
     }
 
     @Override protected void onPause() { web.onPause(); super.onPause(); }

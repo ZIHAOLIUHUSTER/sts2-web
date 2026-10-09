@@ -17,6 +17,30 @@
 :root[data-lang='zhs'] b, :root[data-lang='zhs'] b * { font-family: 'StsZhsBold', var(--font) !important; }
 :root[data-lang='zhs'] i, :root[data-lang='zhs'] i * { font-family: 'StsZhsItalic', var(--font) !important; }
 
+/* A phone paints this 1920px stage at a fraction of its design size. Dense serif glyphs,
+   large outlines and offset shadows merge at that size; use native UI fonts and clean fills.
+   Keep the original desktop typography. Native CJK fonts also avoid decoding large web fonts. */
+@media (pointer: coarse) {
+  :root { --mobile-font: system-ui, -apple-system, 'Roboto', 'Noto Sans', sans-serif; }
+  :root .stage-root, :root .stage-root *, :root[data-lang='zhs'] .stage-root * {
+    font-family: var(--mobile-font) !important;
+    letter-spacing: 0 !important;
+    -webkit-text-stroke-width: 0 !important;
+    text-shadow: none !important;
+  }
+  :root .stage-root :is(.card-title, .card-cost, .card-star, .card-ench-amt) { filter: none; }
+  /* A compact, centred shadow preserves contrast over scene artwork without a ghost copy. */
+  :root .stage-root :is(.mm-label, .card-title, .card-cost, .card-star, .float-num > div,
+      .hp-label, .intent-label, .etb-label, .rb-label, .cb-label) {
+    text-shadow: 0 0 2px #000, 0 0 4px #000 !important;
+  }
+  :root .stage-root .card-desc { line-height: 1.25; }
+  :root .stage-root :is(.hover-tip-title, .hover-tip-body) { font-size: 30px; line-height: 1.35; }
+  :root .stage-root .hover-tip-icon { width: 32px; height: 32px; }
+  :root .stage-root .mm-label { font-size: 36px; }
+  :root .stage-root :is(.dc-output, .dc-input, .dc-line input) { font-family: monospace !important; }
+}
+
 :root {
   --scale: 1;
   --turn: 0deg;

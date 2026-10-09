@@ -1,15 +1,17 @@
 // Localization preload: the rule layer reads tables synchronously through Godot FileAccess (res://localization/...).
 import { $, G, GAME_VERSION } from './game';
 import { A } from './assets';
+import { SUPPORTED_LANGUAGES, normalizeLanguage } from './languages';
+export { normalizeLanguage } from './languages';
 
 export let languages: string[] = [];
 /** The tables as lazy js/ chunks rather than fetched .json (CDN-cacheable, see loadAssetIndex). */
-const tables = import.meta.glob<string>('../../../assets/i18n/*/*.json', { query: '?raw', import: 'default' });
+const tables = import.meta.glob<string>(['../../../assets/i18n/eng/*.json', '../../../assets/i18n/zhs/*.json'], { query: '?raw', import: 'default' });
 export async function preloadLocalization(langs: string[]) {
   const idx = await (await fetch(A + 'i18n/index.json')).json();
-  languages = idx.languages;
+  languages = SUPPORTED_LANGUAGES.filter((lang) => idx.languages.includes(lang));
   const files = new Map<string, string>();
-  await Promise.all(langs.flatMap((l) => idx.tables.map(async (t: string) => {
+  await Promise.all([...new Set(langs.map(normalizeLanguage))].flatMap((l) => idx.tables.map(async (t: string) => {
     const text = await tables[`../../../assets/i18n/${l}/${t}.json`]?.();
     if (text != null) files.set(`localization/${l}/${t}.json`, text);
   })));
@@ -24,6 +26,7 @@ export async function preloadLocalization(langs: string[]) {
 const listed: string[] = [];
 export function addListedFiles(paths: string[]) { listed.push(...paths); }
 export async function setLanguage(lang: string) {
+  lang = normalizeLanguage(lang);
   await preloadLocalization(lang === 'eng' ? ['eng'] : ['eng', lang]);
   try { localStorage.setItem('sts2web.lang', lang); } catch { /* private mode: not remembered */ }
   G.SaveManager.Instance.SettingsSave.Language = lang;
