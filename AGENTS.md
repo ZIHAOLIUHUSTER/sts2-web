@@ -105,6 +105,13 @@ packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下�
 
 `ref/` 和 `_work/` 不入库；`assets/` 和 `packages/core/src/gen/` 入库。更完整的设计与实施记录见 `docs/sts2-web-port-plan.md`。
 
+## Android APK 发布经验
+
+- 封装与构建见 `android/README.md`。工作流须先进入默认分支 `main`，才会出现在 Actions；没有运行记录不等于未启用 Actions。
+- 云端 `gh` 上传附件遇到 401 时，使用 **Android APK** 工作流的 `github.token` 发布：`gh workflow run android.yml --ref main -f tag=<已推送的发布标签>`。
+- GitHub runner 用完整路径调用 SDK 工具：`"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"`。
+- 以任务成功、Release 非草稿、APK 附件已上传为完成；本地构建成功或标签已推送不足以说明发布完成。
+
 ## 提交
 
 提交信息用 Conventional Commits，scope 沿用现有的 `app` / `core` / `tools` / `assets`，例如 `fix(app): …`。
