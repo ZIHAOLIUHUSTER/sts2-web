@@ -13,6 +13,8 @@ ANDROID_HOME=/path/to/android-sdk bash android/build.sh
 
 当前云环境已准备好上述工具，直接运行 `bash android/build.sh`。默认重新构建应用及 Wiki；若刚完成 `pnpm build`，可用 `SKIP_WEB_BUILD=1 bash android/build.sh` 复用产物。
 
+推送 `android-*` 标签也会触发 `.github/workflows/android.yml`，在 GitHub Actions 上构建并发布测试 Release；自动构建使用该次任务生成的调试签名。
+
 输出：`android/build/sts2-web-debug.apk`。这是调试签名的首版 APK，仅用于手动安装测试，不用于应用商店发布。安装要求 Android 8.0+、OpenGL ES 3.0 和较新的 Android System WebView。
 
 ```bash
