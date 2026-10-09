@@ -55,16 +55,25 @@ export function getApp() {
       app = fullView(a);
       // Keep the particle clock alive for auxiliary layers, but do not draw an unmounted combat/room canvas.
       a.ticker.remove(a.render, a);
-      let frames = 0, since = performance.now();
+      let frames = 0, since = performance.now(), previousDraw = 0, sampleIndex = 0, sampleCount = 0;
+      const frameTimes = new Float64Array(240);
+      const timing = () => {
+        const sorted = Array.from(frameTimes.subarray(0, sampleCount)).sort((x, y) => x - y);
+        const percentile = (p: number) => sorted[Math.max(0, Math.ceil(sorted.length * p) - 1)] ?? 0;
+        return { samples: sampleCount, medianMs: percentile(.5), p99Ms: percentile(.99), maxMs: sorted.at(-1) ?? 0,
+          over50ms: sorted.filter(t => t > 50).length };
+      };
       a.ticker.add(() => {
-        if (!a.canvas.isConnected || document.hidden) { frames = 0; since = performance.now(); return; }
+        if (!a.canvas.isConnected || document.hidden) { frames = 0; previousDraw = 0; since = performance.now(); return; }
         a.render(); frames++; lastDraw = performance.now();
+        if (previousDraw) { frameTimes[sampleIndex++ % frameTimes.length] = lastDraw - previousDraw; sampleCount = Math.min(sampleCount + 1, frameTimes.length); }
+        previousDraw = lastDraw;
         if (lastDraw - since >= 1000) { measuredFPS = frames * 1000 / (lastDraw - since); frames = 0; since = lastDraw; }
       }, undefined, UPDATE_PRIORITY.LOW);
       (window as any).__render = () => ({ renderer: gpuName, software: soft,
         configuredFPS: Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60), appliedFPS: a.ticker.maxFPS,
         sharedFPS: Ticker.shared.maxFPS, drawFPS: !document.hidden && a.canvas.isConnected && performance.now() - lastDraw < 1000 ? measuredFPS : 0,
-        canvas: [a.canvas.width, a.canvas.height] });
+        frameTime: timing(), canvas: [a.canvas.width, a.canvas.height] });
       // Godot's BLEND_MODE_SUB (dst − src) for CanvasItemMaterial blend_mode = 2 / render_mode blend_sub
       const blend = () => {
         const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
@@ -78,6 +87,7 @@ export function getApp() {
       let resumeAutoStart = Ticker.shared.autoStart, sharedCount = Ticker.shared.count;
       const visibility = () => {
         if (document.hidden === wasHidden) return;
+        previousDraw = 0; frames = 0; since = performance.now();
         wasHidden = document.hidden;
         if (document.hidden) {
           resumeTicker = a.ticker.started; resumeShared = Ticker.shared.started;

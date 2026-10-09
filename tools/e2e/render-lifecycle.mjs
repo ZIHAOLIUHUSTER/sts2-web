@@ -32,7 +32,7 @@ try {
     stage.sync = () => { syncs++; };
     await stage.mount(document.querySelector('main'));
     await wait(550);
-    const mounted = { renders, syncs };
+    const mounted = { renders, syncs, timing: window.__render().frameTime };
     const hidden = (value) => {
       Object.defineProperty(document, 'hidden', { configurable: true, value });
       document.dispatchEvent(new Event('visibilitychange'));
@@ -75,6 +75,8 @@ try {
   assert.ok(result.limits.every(x => Math.abs(x.applied - x.requested) < .001 && Math.abs(x.shared - x.requested) < .001), 'every FPS setting is applied, even with software rendering; no hidden 30 FPS clamp');
   assert.ok(result.mounted.renders >= 4 && result.mounted.renders <= 14, 'mounted canvas respects 20 FPS');
   assert.equal(result.mounted.syncs, result.mounted.renders, 'combat synchronization follows displayed frames');
+  assert.ok(result.mounted.timing.samples > 0 && result.mounted.timing.medianMs > 0, 'draw interval diagnostics capture rendered frames');
+  assert.ok(result.mounted.timing.p99Ms >= result.mounted.timing.medianMs && result.mounted.timing.maxMs >= result.mounted.timing.p99Ms, 'frame-time percentiles are ordered');
   assert.ok(result.cycles.every((c) => c.suspended && c.resumed), 'repeated background events preserve both tickers');
   assert.ok(result.lateSuspended && result.lateResumed, 'a Spine loading while hidden waits for foreground');
   assert.deepEqual(result.destroyed, { renders: 0, syncs: 0 }, 'destroyed combat leaves no sync or main GPU draws');

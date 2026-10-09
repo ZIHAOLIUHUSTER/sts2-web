@@ -20,7 +20,10 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Made combat updates and skeleton animations follow the frame limit; stopped drawing detached room canvases.
 • Shared concurrent audio decoding without changing the music or effects.
 • Removed a hidden 30 FPS cap in software rendering; combat now uses the frame limit selected in settings.
-• Kept the map rendering context ready between rooms to avoid a bright white flash when reopening the map.`,
+• Kept the map rendering context ready between rooms to avoid a bright white flash when reopening the map.
+• Made card selection, dragging, cancellation and hand rearrangement follow continuous position, scale and rotation.
+• Cleared the final played card after combat and kept tooltips behind scene transitions.
+• Reused card glow pixel buffers without changing the effect.`,
     zhs: `[gold][b]Android[/b][/gold]
 • 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。
 • 安装包仅保留中英文并移除重复音频，缩小下载体积。
@@ -39,7 +42,10 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 战斗更新和骨骼动画遵守帧率限制，不再绘制已经离开画面的房间画布。
 • 共用同时进行的音频解码，不改变音乐和音效内容。
 • 移除软件渲染路径隐藏的 30 帧限制，战斗遵守设置中的帧率上限。
-• 保留地图渲染上下文，避免战斗后返回地图时重建画布引起强烈白闪。`,
+• 保留地图渲染上下文，避免战斗后返回地图时重建画布引起强烈白闪。
+• 选牌、拖拽、取消与手牌重排连续变化，位置、缩放和旋转协调跟随。
+• 清理战后残留的出牌，避免提示穿透转场黑幕。
+• 复用卡牌光效像素缓冲，保留原有效果。`,
   },
   {
     date: '2026_10_08',

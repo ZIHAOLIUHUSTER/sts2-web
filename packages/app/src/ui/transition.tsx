@@ -10,6 +10,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { G, $ } from '../game';
 import { imageUrl } from '../assets';
+import { setTip, pinTips } from './tooltip';
 
 const TR = { Quad: 4 }, EZ = { In: 0, Out: 1 };
 const FADE = 'res://materials/transitions/fade_transition_mat.tres';
@@ -45,6 +46,7 @@ export const transitionView = {
   InTransition: false,
   async RoomFadeOut() {
     this.InTransition = true;
+    setTip(null); pinTips(null); // departing owners may never receive a pointer-leave event
     const F = G.FastModeType, mode = fastMode();
     if (mode === F.Instant) { s.visible = false; return; }
     s.visible = true;
@@ -77,6 +79,7 @@ export const transitionView = {
   /** NTransition.FadeOut: the flat black fades in (QuadIn) while the material's threshold runs 1 − (time − t). */
   async FadeOut(time = 0.8, mat = FADE) {
     this.InTransition = true;
+    setTip(null); pinTips(null); // departing owners may never receive a pointer-leave event
     if (fastMode() === G.FastModeType.Instant) { s.visible = false; paint?.(); return; }
     s.visible = true;
     s.SimpleA = 0;
@@ -165,7 +168,7 @@ export function TransitionLayer() {
     return () => { paint = null; };
   }, []);
   return (
-    <div class="viewport transition-viewport">
+    <div class="viewport transition-viewport" style={{ zIndex: 210 }}>
       <div class="stage-root transition-root">
         <div class="transition-rect">
           <div class="transition-mat" ref={rect} />

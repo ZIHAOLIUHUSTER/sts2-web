@@ -1956,6 +1956,18 @@ export function installBridge() {
     const u = NCombatRoom.Instance?.Ui;
     u?.Hand?.AnimOut?.();
     u?.PlayQueue?.AnimOut?.();
+    // The winning card can remain in Play: the rules remove combat piles before the usual discard VFX.
+    // Retire only its presentation. Keep this container hidden afterwards so late visual callbacks cannot revive it.
+    if (u?.PlayContainer) {
+      const container = u.PlayContainer;
+      const t = new $.WebTween();
+      t.TweenProperty(container, 'modulate:a', 0, 0.2).SetEase(1).SetTrans(7);
+      t.TweenCallback(() => {
+        container.Visible = false;
+        for (const card of [...container.$kids]) card.QueueFree?.();
+        invalidate();
+      });
+    }
   });
   log('installed');
 }

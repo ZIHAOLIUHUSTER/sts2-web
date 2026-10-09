@@ -26,6 +26,8 @@ const smooth = (a: number, b: number, x: number) => { const t = Math.min(Math.ma
 
 const cache = new Map<string, HTMLCanvasElement>();
 const pool: HTMLCanvasElement[] = [];
+// Keep the pixel buffer with its pooled canvas instead of allocating 256 KiB per glow per frame.
+const buffers = new WeakMap<HTMLCanvasElement, ImageData>();
 let cacheFrame = -1;
 /**
  * The highlight at shader width `w` in colour `rgba` (the Highlight node's modulate) for this frame, or null while the
@@ -41,7 +43,10 @@ export function highlightImage(w: number, rgba: number[], frame: number, time: n
   c = pool.pop();
   if (!c) { c = document.createElement('canvas'); c.width = c.height = SIZE; }
   const g = c.getContext('2d')!;
-  const out = g.createImageData(SIZE, SIZE), d = out.data;
+  let out = buffers.get(c);
+  if (!out) { out = g.createImageData(SIZE, SIZE); buffers.set(c, out); }
+  const d = out.data;
+  d.fill(0);
   const [r, gg, b, ma] = rgba, lo = 1 - w, s = sdf, l = lum!;
   for (let i = 0; i < SIZE * SIZE; i++) {
     const a = s[i] * ma;

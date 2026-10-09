@@ -363,19 +363,21 @@ export class HolderView extends Web(NHandCardHolder) {
   SetTargetScale(s: any) { this.targetScale = s; this.anim.scale = true; }
   SetAngleInstantly(a: number) { this.anim.angle = false; this.RotationDegrees = a; }
   SetScaleInstantly(s: any) { this.anim.scale = false; this.Scale = s; }
-  /** AnimAngle / AnimScale / AnimPosition: exponential approach with snap thresholds. */
+  /** Follow one transform target from the visible pose, with the same progress on every axis.
+   * Exponential damping is independent of refresh rate (~95% in 170 ms), including interrupted drags. */
   step(dt: number) {
+    const progress = 1 - Math.exp(-18 * Math.max(0, dt));
     if (this.anim.angle) {
-      const d = lerp(this.RotationDegrees, this.targetAngle, k(dt, 10));
+      const d = lerp(this.RotationDegrees, this.targetAngle, progress);
       this.RotationDegrees = Math.abs(d - this.targetAngle) < 0.1 ? this.targetAngle : d;
       if (this.RotationDegrees === this.targetAngle) this.anim.angle = false;
     }
     if (this.anim.scale) {
-      this.Scale = this.Scale.Lerp(this.targetScale, k(dt, 8));
+      this.Scale = this.Scale.Lerp(this.targetScale, progress);
       if (Math.abs(this.targetScale.X - this.Scale.X) < 0.002) { this.Scale = this.targetScale; this.anim.scale = false; }
     }
     if (this.anim.pos) {
-      this.Position = this.Position.Lerp(this.targetPos, k(dt, 7));
+      this.Position = this.Position.Lerp(this.targetPos, progress);
       if (!this.hitboxEnabled && Math.abs(this.Position.X - this.targetPos.X) < 200) this.hitboxEnabled = true;
       if (this.Position.DistanceSquaredTo(this.targetPos) < 1) { this.Position = this.targetPos; this.anim.pos = false; }
     }
@@ -391,8 +393,8 @@ export class HolderView extends Web(NHandCardHolder) {
       this.ZIndex = this.isFocused ? 1 : 0; // NHandCardHolder.DoCardHoverEffects
     }
   }
-  BeginDrag() { this.SetAngleInstantly(0); this.SetScaleInstantly(v2(1, 1)); }
-  CancelDrag() { this.ZIndex = 0; this.SetAngleInstantly(0); this.SetScaleInstantly(v2(1, 1)); }
+  BeginDrag() { this.SetTargetAngle(0); this.SetTargetScale(v2(1, 1)); }
+  CancelDrag() { this.ZIndex = 0; this.SetDefaultTargets(); }
   SetDefaultTargets() {
     this.ZIndex = 0;
     const act = this.hand.ActiveHolders, i = act.indexOf(this);
@@ -522,12 +524,11 @@ export class HandView extends Web(NPlayerHand) {
       if (f > -1) p = v2(p.X - Math.sign(f - i) * lerp(100, 0, Math.min(1, Math.abs(f - i) / 4)), p.Y);
       const h = act[i];
       if (f === i) {
-        h.SetAngleInstantly(0);
-        h.SetScaleInstantly(v2(1, 1));
+        h.SetTargetAngle(0);
+        h.SetTargetScale(v2(1, 1));
         let y = -422 * 0.5 + 2;
         if (this.isDisabled) y -= 100;
         p = v2(p.X, y);
-        h.Position = v2(h.Position.X, y);
         h.SetTargetPosition(p);
       } else {
         h.SetTargetPosition(p);
@@ -924,6 +925,7 @@ export class CombatUiView extends Web(NCombatUi) {
   get PlayContainerCards(): CardNodeView[] { return this.PlayContainer.$kids.filter((c: any) => c instanceof CardNodeView); }
   GetCardFromPlayContainer(card: any) { return this.PlayContainerCards.find((n) => n.Model === card) ?? null; }
   AddToPlayContainer(card: any) {
+    if (!card || card.$freed) return; // A late animation callback must not resurrect an ended card.
     card.$parent?.RemoveChild(card);
     this.PlayContainer.AddChild(card);
   }
