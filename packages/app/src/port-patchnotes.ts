@@ -1,6 +1,13 @@
 /** Web port updates, newest first. Add both languages here; original game notes remain in assets/patch_notes. */
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
+    date: '2026_10_09',
+    eng: `[gold][b]Android[/b][/gold]
+• Added an experimental debug APK build for trying the web port on Android.`,
+    zhs: `[gold][b]Android[/b][/gold]
+• 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。`,
+  },
+  {
     date: '2026_10_08',
     eng: `[gold][b]Main menu[/b][/gold]
 • Added a prominent notice that the game will be taken offline soon due to copyright issues, reminding players to manage their progress.

@@ -22,3 +22,6 @@ dist/
 .vercel
 .wrangler
 .env*
+
+# Local Android APK outputs and debug signing key
+/android/build/
