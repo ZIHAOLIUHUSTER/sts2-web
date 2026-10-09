@@ -1,6 +1,12 @@
 name: Android APK
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Android release tag
+        required: true
+        default: android-v0.1.0
   push:
     tags: ['android-*']
 
@@ -11,8 +17,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
@@ -28,6 +38,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" android/build/sts2-web-debug.apk android/build/sts2-web-debug.apk.sha256 \
-            --verify-tag --prerelease --title "Android APK · $GITHUB_REF_NAME" \
-            --notes 'Android 首个测试 APK，内置游戏资源与 Wiki。Android 8.0+，请更新 Android System WebView。调试签名，尚未真机验证。请检查画面、音效、触控和保存后重新打开继续游戏。应用存档独立于浏览器；卸载或清除数据会删除存档。构建说明见 android/README.md，首版尚未实现 Blob 备份下载。'
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "Android APK · $RELEASE_TAG" \
+              --notes 'Android 首个测试 APK，内置游戏资源与 Wiki。Android 8.0+，请更新 Android System WebView。调试签名，尚未真机验证。请检查画面、音效、触控和保存后重新打开继续游戏。应用存档独立于浏览器；卸载或清除数据会删除存档。构建说明见 android/README.md，首版尚未实现 Blob 备份下载。'
+          fi
+          gh release upload "$RELEASE_TAG" android/build/sts2-web-debug.apk android/build/sts2-web-debug.apk.sha256 --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease
