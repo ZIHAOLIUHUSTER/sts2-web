@@ -30,7 +30,7 @@ jobs:
         run: |
           npm install --global pnpm@11.22.0
           pnpm install --frozen-lockfile
-          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
           bash android/build.sh
           cd android/build
           sha256sum sts2-web-debug.apk > sts2-web-debug.apk.sha256
