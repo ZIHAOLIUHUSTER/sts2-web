@@ -92,7 +92,7 @@ async function sample(name) {
   const heap = await cdp.send('Runtime.getHeapUsage');
   const dom = await cdp.send('Memory.getDOMCounters');
   const game = await page.evaluate(() => ({ screen: window.ui?.screen, mapOpen: window.ui?.mapOpen,
-    audio: window.__audio?.(), gpu: window.__performanceTextures(), memory: navigator.deviceMemory, cores: navigator.hardwareConcurrency }));
+    audio: window.__audio?.(), render: window.__render?.(), gpu: window.__performanceTextures(), memory: navigator.deviceMemory, cores: navigator.hardwareConcurrency }));
   const fetched = [...requested].flatMap((p) => images.has(p) ? [{ path: p, ...images.get(p) }] : []);
   const snapshot = { name, heapBeforeGc: beforeGc, heapAfterGc: heap, dom, frame, game,
     requestedImageCount: fetched.length, requestedImageRgbaBytes: fetched.reduce((n, t) => n + bytes(t), 0),

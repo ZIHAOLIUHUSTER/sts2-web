@@ -18,7 +18,9 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Limited retained decoded sound effects, shared duplicate audio, and released finished playback resources.
 • Paused audio and the main renderer while the game is in the background.
 • Made combat updates and skeleton animations follow the frame limit; stopped drawing detached room canvases.
-• Shared concurrent audio decoding without changing the music or effects.`,
+• Shared concurrent audio decoding without changing the music or effects.
+• Removed a hidden 30 FPS cap in software rendering; combat now uses the frame limit selected in settings.
+• Kept the map rendering context ready between rooms to avoid a bright white flash when reopening the map.`,
     zhs: `[gold][b]Android[/b][/gold]
 • 新增实验性调试 APK 构建，供在 Android 设备上试用移植版。
 • 安装包仅保留中英文并移除重复音频，缩小下载体积。
@@ -35,7 +37,9 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • 限制已解码音效缓存，共用重复音频，及时释放结束播放的资源。
 • 游戏切到后台时暂停声音和主画面渲染。
 • 战斗更新和骨骼动画遵守帧率限制，不再绘制已经离开画面的房间画布。
-• 共用同时进行的音频解码，不改变音乐和音效内容。`,
+• 共用同时进行的音频解码，不改变音乐和音效内容。
+• 移除软件渲染路径隐藏的 30 帧限制，战斗遵守设置中的帧率上限。
+• 保留地图渲染上下文，避免战斗后返回地图时重建画布引起强烈白闪。`,
   },
   {
     date: '2026_10_08',

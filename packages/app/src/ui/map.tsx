@@ -713,7 +713,10 @@ const mapApp = () => (appP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, antialias: false, autoStart: false, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('map-fx');
-  fullView(a, true);
+  // The map is revisited after every room. Keep this one context resident: restoring its
+  // full-screen filtered layer can flash an uninitialised framebuffer on older WebViews.
+  // autoStart:false and frame() below still issue no GPU draws while the map is detached.
+  fullView(a);
   return a;
 })());
 const spineLoads = new Map<string, Promise<boolean>>();
@@ -759,7 +762,7 @@ const pixi = {
   },
   frame() {
     const a = this.app;
-    if (!a) return;
+    if (!a || !a.canvas.isConnected) return;
     this.root.y = fx.MapY;
     this.points.alpha = fx.PointsA;
     const r = safe(() => rs().Act, null);

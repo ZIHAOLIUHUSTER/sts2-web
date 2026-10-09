@@ -16,7 +16,7 @@ export function animate(fn: (dt: number) => boolean) {
   tickers.add(fn);
   if (!hooked) {
     hooked = true;
-    // the app's ticker, so SettingsSave.FpsLimit (and software rendering's 30 fps) bound this work too
+    // the app's ticker, so SettingsSave.FpsLimit bounds this work too
     getApp().then((a) => a.ticker.add((t: Ticker) => {
       const dt = Math.min(t.deltaMS / 1000, 0.1);
       shaderTime.t += dt;

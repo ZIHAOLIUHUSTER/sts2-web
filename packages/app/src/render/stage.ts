@@ -22,24 +22,22 @@ let appReady: Promise<Application> | null = null;
 const loaded = new Map<string, Promise<boolean>>();
 
 /** WebGL without a GPU (hardware acceleration off, blocklisted driver) rasterizes on the CPU. */
-function softwareGL() {
-  let gl: WebGLRenderingContext | null = null;
+function rendererName(gl?: WebGLRenderingContext | WebGL2RenderingContext) {
   try {
-    gl = document.createElement('canvas').getContext('webgl');
     const info = gl?.getExtension('WEBGL_debug_renderer_info');
-    return /swiftshader|llvmpipe|software/i.test(String(info ? gl!.getParameter(info.UNMASKED_RENDERER_WEBGL) : ''));
-  } catch { return false; }
-  finally { gl?.getExtension('WEBGL_lose_context')?.loseContext(); }
+    return String(info ? gl!.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl?.getParameter(gl.RENDERER) ?? 'unknown');
+  } catch { return 'unknown'; }
 }
 let soft = false;
-/** SettingsSave.FpsLimit (NFpsPaginator → Engine.MaxFps); 0 = uncapped. Software rendering is held at 30. */
+let gpuName = 'unknown', measuredFPS = 0, lastDraw = 0;
+/** SettingsSave.FpsLimit (NFpsPaginator → Engine.MaxFps); 0 = uncapped. */
 /** NCreature.GetCurrentAnimationTimeRemaining over the dying creatures (NCombatUi.ShowRewards waits it out). */
 let deathEnd = 0;
 export const deathAnimRemaining = () => Math.max(0, (deathEnd - performance.now()) / 1000);
 export function applyFpsLimit() {
   if (!app) return;
   const limit = Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60) || 0;
-  app.ticker.maxFPS = soft ? Math.min(limit || 30, 30) : limit;
+  app.ticker.maxFPS = limit;
   // Spine and scene attachments default to the shared ticker: cap their work at the displayed frame rate too.
   Ticker.shared.maxFPS = app.ticker.maxFPS;
 }
@@ -47,15 +45,26 @@ export function getApp() {
   if (!appReady) {
     appReady = (async () => {
       const a = new Application();
-      // software rendering: no MSAA, half resolution (¼ of the pixels to fill) and 30 fps keep it off a full CPU core.
       // WebGL fixes antialiasing when the context is created, so SettingsSave.Msaa applies from the next load.
-      soft = softwareGL();
       const msaa = Number(G.SaveManager.Instance?.SettingsSave?.Msaa ?? 2) > 0;
-      await a.init({ width: W, height: H, backgroundAlpha: 0, antialias: msaa && !soft && !mobileRendering, autoDensity: true, resolution: soft ? 0.5 : renderResolution() });
+      await a.init({ width: W, height: H, backgroundAlpha: 0, antialias: msaa && !mobileRendering, autoDensity: true, resolution: renderResolution() });
+      // Detect the actual game renderer; a separate probe could use another backend and loses an extra GL context.
+      gpuName = rendererName((a.renderer as any).gl);
+      soft = /swiftshader|llvmpipe|software/i.test(gpuName);
+      if (soft) a.renderer.resolution = 0.5;
       app = fullView(a);
       // Keep the particle clock alive for auxiliary layers, but do not draw an unmounted combat/room canvas.
       a.ticker.remove(a.render, a);
-      a.ticker.add(() => { if (a.canvas.isConnected && !document.hidden) a.render(); }, undefined, UPDATE_PRIORITY.LOW);
+      let frames = 0, since = performance.now();
+      a.ticker.add(() => {
+        if (!a.canvas.isConnected || document.hidden) { frames = 0; since = performance.now(); return; }
+        a.render(); frames++; lastDraw = performance.now();
+        if (lastDraw - since >= 1000) { measuredFPS = frames * 1000 / (lastDraw - since); frames = 0; since = lastDraw; }
+      }, undefined, UPDATE_PRIORITY.LOW);
+      (window as any).__render = () => ({ renderer: gpuName, software: soft,
+        configuredFPS: Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60), appliedFPS: a.ticker.maxFPS,
+        sharedFPS: Ticker.shared.maxFPS, drawFPS: !document.hidden && a.canvas.isConnected && performance.now() - lastDraw < 1000 ? measuredFPS : 0,
+        canvas: [a.canvas.width, a.canvas.height] });
       // Godot's BLEND_MODE_SUB (dst − src) for CanvasItemMaterial blend_mode = 2 / render_mode blend_sub
       const blend = () => {
         const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;

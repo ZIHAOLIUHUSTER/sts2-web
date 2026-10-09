@@ -9,9 +9,18 @@ await page.route(url, (r) => r.fulfill({ contentType: 'text/html', body: '<main>
 try {
   await page.goto(url);
   const result = await page.evaluate(async () => {
-    const { getApp, CombatStage } = await import('/src/render/stage.ts');
+    const { getApp, CombatStage, applyFpsLimit } = await import('/src/render/stage.ts');
+    const { G } = await import('/src/game.ts');
     const { Ticker } = await import('/node_modules/.vite/deps/pixi__js.js');
     const app = await getApp();
+    const previousMock = G.SaveManager._mockInstance;
+    G.SaveManager._mockInstance = { SettingsSave: { FpsLimit: 60 } };
+    const manager = G.SaveManager.Instance;
+    const limits = [24, 30, 60, 120, 0].map(limit => {
+      manager.SettingsSave.FpsLimit = limit; applyFpsLimit();
+      return { requested: limit, applied: app.ticker.maxFPS, shared: Ticker.shared.maxFPS };
+    });
+    G.SaveManager._mockInstance = previousMock;
     app.ticker.maxFPS = 20;
     let renders = 0, syncs = 0;
     const actualRender = app.render.bind(app);
@@ -60,9 +69,10 @@ try {
     const late = new CombatStage({});
     late.destroy();
     await late.mount(document.querySelector('main'));
-    return { detached, mounted, cycles, lateSuspended, lateResumed, destroyed, lateConnected: app.canvas.isConnected };
+    return { limits, renderer: window.__render(), detached, mounted, cycles, lateSuspended, lateResumed, destroyed, lateConnected: app.canvas.isConnected };
   });
   assert.equal(result.detached, 0, 'an unmounted main canvas issues no GPU draws');
+  assert.ok(result.limits.every(x => Math.abs(x.applied - x.requested) < .001 && Math.abs(x.shared - x.requested) < .001), 'every FPS setting is applied, even with software rendering; no hidden 30 FPS clamp');
   assert.ok(result.mounted.renders >= 4 && result.mounted.renders <= 14, 'mounted canvas respects 20 FPS');
   assert.equal(result.mounted.syncs, result.mounted.renders, 'combat synchronization follows displayed frames');
   assert.ok(result.cycles.every((c) => c.suspended && c.resumed), 'repeated background events preserve both tickers');
