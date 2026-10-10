@@ -4,7 +4,7 @@ export { Task, async, seq, Seq, toTask, TaskCompletionSource, CancellationToken,
 export { Dictionary, HashSet, Queue, Stack, introSort } from './collections';
 export { Enumerable } from './linq';
 export { Random, Exception, StringBuilder, TimeSpan, DateTime, Regex, extAttr } from './bcl';
-export { WebTween, onFrame, ease, setEngineTimeScale } from './tween';
+export { WebTween, onFrame, ease, setEngineTimeScale, getEngineTimeScale, setFrameDriver } from './tween';
 export { Vector2, Vector2I, Color, vfs, setStorageErrorHandler, setTimeScale, setGodotLogSink, nextFrame, setResourceReader, setResourceLister, readResource } from './godot';
 import './thirdparty';
 export { jsonContext, JsonSerializer, snapshot, restore } from './json';

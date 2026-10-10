@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { $ } from './game';
 import { reportError } from './analytics';
+import { androidFrameClock, onAndroidFrame } from './render/frameclock';
 export type Screen = 'boot' | 'menu' | 'run' | 'gameover' | 'library' | 'relics' | 'potions' | 'history'
   | 'stats' | 'credits';
 export type MenuSubmenu = 'singleplayer' | 'charselect' | 'settings' | 'compendium' | 'timeline' | 'daily' | 'custom' | 'profile';
@@ -28,14 +29,17 @@ export function invalidate() { dirty = true; }
 const LIVE_MS = 250;
 let lastRender = 0;
 function loop(t: number) {
-  requestAnimationFrame(loop); // first: a throwing render must not stop the loop (the UI would freeze for good)
+  if (!androidFrameClock) requestAnimationFrame(loop); // first: a throwing render must not stop the loop (the UI would freeze for good)
   if (dirty || (ui.live && t - lastRender >= LIVE_MS)) {
     dirty = false;
     lastRender = t;
     try { render(); } catch (e) { console.error('render failed', e); reportError('render', e); }
   }
 }
-export function startLoop() { requestAnimationFrame(loop); }
+export function startLoop() {
+  if (androidFrameClock) onAndroidFrame((_dt, now) => loop(now), 100);
+  else requestAnimationFrame(loop);
+}
 /** Back button of menu-side screens: to the pause menu when opened over a run, else to the main menu. */
 export function leaveScreen() { if (ui.subscreen) ui.subscreen = null; else ui.screen = 'menu'; invalidate(); }
 // ------------------------------------------------------------------ NOverlayStack

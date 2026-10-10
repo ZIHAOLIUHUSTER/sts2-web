@@ -4,3 +4,6 @@ export const mobileRendering = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.u
 
 /** Cap every full-screen canvas, including effects that use their own Pixi renderer. */
 export const renderResolution = () => Math.min(window.devicePixelRatio, mobileRendering ? 1 : 2);
+
+/** Only the installed APK opts into its coordinated rendering pipeline. */
+export const androidApp = !!(window as Window & { Sts2Android?: unknown }).Sts2Android;

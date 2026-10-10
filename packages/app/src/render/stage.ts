@@ -13,6 +13,7 @@ import { G, $, N, list } from '../game';
 import { slotMats } from './slotmats';
 import { fullView, view, edge } from '../view';
 import { mobileRendering, renderResolution } from './quality';
+import { androidFrameClock, onAndroidFrame, setFrameLimit, frameClockInfo } from './frameclock';
 
 export const W = 1920, H = 1080;
 /** The mounted combat stage (VfxCmd calls from the rule layer land here). */
@@ -37,7 +38,8 @@ export const deathAnimRemaining = () => Math.max(0, (deathEnd - performance.now(
 export function applyFpsLimit() {
   if (!app) return;
   const limit = Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60) || 0;
-  app.ticker.maxFPS = limit;
+  if (androidFrameClock) setFrameLimit(limit);
+  app.ticker.maxFPS = androidFrameClock ? 0 : limit;
   // Spine and scene attachments default to the shared ticker: cap their work at the displayed frame rate too.
   Ticker.shared.maxFPS = app.ticker.maxFPS;
 }
@@ -47,7 +49,7 @@ export function getApp() {
       const a = new Application();
       // WebGL fixes antialiasing when the context is created, so SettingsSave.Msaa applies from the next load.
       const msaa = Number(G.SaveManager.Instance?.SettingsSave?.Msaa ?? 2) > 0;
-      await a.init({ width: W, height: H, backgroundAlpha: 0, antialias: msaa && !mobileRendering, autoDensity: true, resolution: renderResolution() });
+      await a.init({ autoStart: !androidFrameClock, width: W, height: H, backgroundAlpha: 0, antialias: msaa && !mobileRendering, autoDensity: true, resolution: renderResolution() });
       // Detect the actual game renderer; a separate probe could use another backend and loses an extra GL context.
       gpuName = rendererName((a.renderer as any).gl);
       soft = /swiftshader|llvmpipe|software/i.test(gpuName);
@@ -71,9 +73,9 @@ export function getApp() {
         if (lastDraw - since >= 1000) { measuredFPS = frames * 1000 / (lastDraw - since); frames = 0; since = lastDraw; }
       }, undefined, UPDATE_PRIORITY.LOW);
       (window as any).__render = () => ({ renderer: gpuName, software: soft,
-        configuredFPS: Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60), appliedFPS: a.ticker.maxFPS,
+        configuredFPS: Number(G.SaveManager.Instance?.SettingsSave?.FpsLimit ?? 60), appliedFPS: androidFrameClock ? frameClockInfo().fps : a.ticker.maxFPS,
         sharedFPS: Ticker.shared.maxFPS, drawFPS: !document.hidden && a.canvas.isConnected && performance.now() - lastDraw < 1000 ? measuredFPS : 0,
-        frameTime: timing(), canvas: [a.canvas.width, a.canvas.height] });
+        clock: frameClockInfo(), frameTime: timing(), canvas: [a.canvas.width, a.canvas.height] });
       // Godot's BLEND_MODE_SUB (dst − src) for CanvasItemMaterial blend_mode = 2 / render_mode blend_sub
       const blend = () => {
         const gl = (a.renderer as any).gl as WebGL2RenderingContext | undefined, map = (a.renderer as any).state?.blendModesMap;
@@ -82,6 +84,22 @@ export function getApp() {
       blend();
       a.canvas.addEventListener('webglcontextrestored', blend);
       applyFpsLimit();
+      if (androidFrameClock) {
+        a.ticker.autoStart = false; a.ticker.stop();
+        Ticker.shared.autoStart = false; Ticker.shared.stop();
+        // The host supplies elapsed time; Pixi's independent 100 ms clamp would split the animation clocks again.
+        a.ticker.minFPS = 0; Ticker.shared.minFPS = 0;
+        onAndroidFrame((dt, now) => {
+          const scale = $.getEngineTimeScale();
+          // Reset lastTime from the shared delta: background time never advances animations.
+          Ticker.shared.lastTime = now - dt * 1000;
+          Ticker.shared.speed = scale;
+          Ticker.shared.update(now);
+          a.ticker.lastTime = now - dt * 1000;
+          a.ticker.speed = scale;
+          a.ticker.update(now);
+        });
+      }
       // Hidden WebViews need no GPU frames. Preserve the prior running state across background/foreground.
       let resumeTicker = a.ticker.started, resumeShared = Ticker.shared.started, wasHidden = false;
       let resumeAutoStart = Ticker.shared.autoStart, sharedCount = Ticker.shared.count;
@@ -89,6 +107,7 @@ export function getApp() {
         if (document.hidden === wasHidden) return;
         previousDraw = 0; frames = 0; since = performance.now();
         wasHidden = document.hidden;
+        if (androidFrameClock) return;
         if (document.hidden) {
           resumeTicker = a.ticker.started; resumeShared = Ticker.shared.started;
           resumeAutoStart = Ticker.shared.autoStart; sharedCount = Ticker.shared.count;

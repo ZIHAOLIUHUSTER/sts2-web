@@ -94,6 +94,10 @@ export function t(k: keyof typeof UI): string {
 const APP: Record<string, Record<string, string>> = {
   portPatchNotesHeader: { eng: 'Web Port Updates', zhs: '移植版更新' },
   storageFull: { eng: 'Saving failed. Your previous save is kept; check browser storage and try again.', zhs: '保存失败，已保留上一次存档。请检查浏览器存储后重试。' },
+  exportDiagnostics: { eng: 'Performance diagnostics', zhs: '性能诊断' },
+  diagnosticsButton: { eng: 'Export report', zhs: '导出报告' },
+  diagnosticsExported: { eng: 'Performance report saved. No saves are included.', zhs: '性能报告已保存，不包含存档。' },
+  diagnosticsFailed: { eng: 'Could not save the performance report.', zhs: '性能报告保存失败。' },
   exportSaves: { eng: 'Save backup', zhs: '存档备份' },
   exportButton: { eng: 'Download', zhs: '下载备份' },
   restoreSaves: { eng: 'Restore saves', zhs: '恢复存档' },

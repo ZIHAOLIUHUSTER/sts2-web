@@ -8,7 +8,7 @@ import { QuadBatch, plainShader } from './canvas';
 import { loadScene, followParticles, sceneTexture, playSpriteVfx, particleItem } from './scene';
 import { TrailVfx, ShuffleFlyVfx, ExhaustVfx, CardSmithVfx } from '../cardnodes';
 import { fullView, view } from '../view';
-import { renderResolution } from './quality';
+import { renderResolution, androidApp } from './quality';
 
 /** card_trail_<character>.tscn Line2D modulates (Outer, Inner); widths, curves and gradients are shared. */
 const TRAIL_MOD: Record<string, number[][]> = {
@@ -246,21 +246,39 @@ export class CardFxCanvas {
   private stop: (() => void) | null = null;
   private dead = false;
   async mount(el: HTMLElement) {
-    const a = await overlayApp(this.key);
-    if (this.dead) return;
-    this.app = a;
-    a.stage.removeChildren();
-    a.stage.addChild(this.root);
+    // Publish the lightweight root before creating a GL context: VfxCmd can already enqueue its objects here.
     if (this.key === 'combat') combatRoot = this.root;
     if (this.key === 'global') globalRoot = this.root;
-    el.appendChild(a.canvas);
-    let idle = false;
+    let preparing: Promise<void> | null = null;
+    const prepare = () => preparing ??= overlayApp(this.key).then((a) => {
+      if (this.dead) return;
+      this.app = a;
+      a.stage.removeChildren();
+      a.stage.addChild(this.root);
+      a.canvas.style.visibility = androidApp ? 'hidden' : 'visible';
+      el.appendChild(a.canvas);
+    });
+    if (!androidApp) await prepare();
+    if (this.dead) return;
+    let idle = androidApp;
     this.stop = $.onFrame((dt: number) => {
       if (this.dead) return false;
       this.sync(dt);
-      this.renderSlots(a);
       const busy = this.trails.size > 0 || this.shuffles.size > 0 || this.slots.size > 0 || this.root.children.length > this.trails.size;
-      if (busy || !idle) a.render();
+      if (busy && !this.app) void prepare();
+      const a = this.app;
+      if (!a) return;
+      if (!androidApp) {
+        this.renderSlots(a);
+        if (busy || !idle) a.render();
+      } else if (busy) {
+        this.renderSlots(a);
+        a.render();
+        a.canvas.style.visibility = 'visible';
+      } else if (!idle) {
+        // Preserve the renderer and its shared Pixi resources, but retire the empty compositing surface.
+        a.canvas.style.visibility = 'hidden';
+      }
       idle = !busy;
     });
   }
@@ -338,7 +356,7 @@ export class CardFxCanvas {
     this.trails.clear();
     this.shuffles.clear();
     this.root.destroy({ children: true });
-    if (this.app) { this.app.stage.removeChildren(); this.app.render(); this.app.canvas.remove(); }
+    if (this.app) { this.app.canvas.style.visibility = 'hidden'; this.app.stage.removeChildren(); this.app.canvas.remove(); }
     this.app = null;
   }
 }

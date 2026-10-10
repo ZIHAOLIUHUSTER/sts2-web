@@ -1,3 +1,4 @@
+import { initAndroid } from './start.mjs';
 // Save & Quit → reload → Continue in the browser: start a run, enter the first fight, quit from the pause menu, reload
 // the page, continue from the menu.
 // Usage: CHROME=<path> [URL=<dev server>] node tools/e2e/continue.mjs <outDir>   (exit 1 on failure)
@@ -8,6 +9,7 @@ const out = process.argv[2] ?? '/tmp/sts2continue';
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME });
 const page = await browser.newPage({ viewport }); // VIEW / ASPECT: see start.mjs
+await initAndroid(page);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 const fail = async (msg) => { console.log('FAIL', msg, errors); await page.screenshot({ path: `${out}/fail.png` }); await browser.close(); process.exit(1); };

@@ -5,26 +5,57 @@
 // ------------------------------------------------------------------ process frames
 const frameFns = new Set<(dt: number) => boolean | void>();
 let pending = false, last = 0;
+type FrameDriver = (frame: (dt: number) => void) => () => void;
+let externalDriver: FrameDriver | null = null, stopExternal: (() => void) | null = null;
+let generation = 0;
+/** Optional host frame clock. Without a host, browser/headless scheduling stays unchanged. */
+export function setFrameDriver(driver: FrameDriver | null) {
+  generation++;
+  stopExternal?.(); stopExternal = null;
+  externalDriver = driver;
+  pending = false; last = 0;
+  if (frameFns.size) startFrames();
+}
+export function getEngineTimeScale() { return engineScale; }
+function advanceFrames(dt: number) {
+  const scaledDt = dt * engineScale;
+  for (const f of [...frameFns]) {
+    // A previous callback can unsubscribe another callback in the same frame.
+    if (!frameFns.has(f)) continue;
+    let keep: boolean | void;
+    try { keep = f(scaledDt); } catch (e) { console.error(e); keep = false; }
+    if (keep === false) frameFns.delete(f);
+  }
+}
+function startFrames() {
+  pending = true;
+  if (externalDriver) {
+    stopExternal = externalDriver((dt) => {
+      advanceFrames(dt);
+      if (!frameFns.size) { stopExternal?.(); stopExternal = null; pending = false; }
+    });
+  } else {
+    const id = generation;
+    schedule((now) => loop(now, id));
+  }
+}
 /** Engine.TimeScale for process frames (NHitStop): every frame callback gets the scaled delta. */
 let engineScale = 1;
 export function setEngineTimeScale(s: number) { engineScale = s; }
 const schedule = (f: (now: number) => void) =>
   typeof requestAnimationFrame === 'function' ? requestAnimationFrame(f) : setTimeout(() => f(performance.now()), 16);
-function loop(now: number) {
-  const dt = (last ? Math.max(0, (now - last) / 1000) : 1 / 60) * engineScale;
+function loop(now: number, id: number) {
+  if (id !== generation) return; // ignore an already queued callback from the previous clock
+  const dt = last ? Math.max(0, (now - last) / 1000) : 1 / 60;
   last = now;
-  for (const f of [...frameFns]) {
-    let keep: boolean | void;
-    try { keep = f(dt); } catch (e) { console.error(e); keep = false; }
-    if (keep === false) frameFns.delete(f);
-  }
-  if (frameFns.size) schedule(loop);
+  advanceFrames(dt);
+  if (frameFns.size) schedule((next) => loop(next, id));
   else { pending = false; last = 0; }
 }
 /** Run `f(delta)` every process frame until it returns false (or the returned stop function is called). */
 export function onFrame(f: (dt: number) => boolean | void): () => void {
   frameFns.add(f);
-  if (!pending) { pending = true; schedule(loop); }
+  if (!pending) startFrames();
   return () => { frameFns.delete(f); };
 }
 

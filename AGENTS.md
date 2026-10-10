@@ -131,6 +131,8 @@ packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下�
 - 揭幕与开场共用房间的有界 visualReady；初始 HUD 等就绪才挂载，取消后的资源不得启动旧战斗。退场保留同一 DOM，逻辑栈与非交互画面分开收尾。
 - 全屏特效先初始化有效透明图形，待机不显示；默认比例与改变比例均验收。Vite 测试导入须确认模块单例，避免 HMR 分裂导致假失败。
 
+- APK 专用行为以 Sts2Android 检测，UA 不等于应用；统一时钟仅一个限帧门槛。特效保持 DOM 图层顺序，按需创建、空闲停画；诊断口径见 `docs/android-rendering.md`。
+
 ## 提交
 
 提交信息用 Conventional Commits，scope 沿用现有的 `app` / `core` / `tools` / `assets`，例如 `fix(app): …`。

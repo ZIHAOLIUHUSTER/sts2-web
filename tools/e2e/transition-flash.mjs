@@ -1,3 +1,4 @@
+import { initAndroid } from './start.mjs';
 // Capture every composited transition frame, not just settled screenshots. Fresh saves only.
 // CHROME=<path> URL=<server> [VIEW=1280x800] node tools/e2e/transition-flash.mjs /tmp/transitions
 import { chromium } from 'playwright';
@@ -36,6 +37,7 @@ const out = process.argv[2] ?? '/tmp/sts2-transitions'; fs.mkdirSync(out, { recu
 const [width, height] = (process.env.VIEW ?? '1280x800').split('x').map(Number);
 const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--max-active-webgl-contexts=8'] });
 const page = await browser.newPage({ viewport: { width, height }, hasTouch: true, serviceWorkers: 'block' });
+await initAndroid(page);
 const errors = []; page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (/Too many active WebGL contexts/.test(m.text())) errors.push(m.text()); });
 await page.addInitScript(() => {

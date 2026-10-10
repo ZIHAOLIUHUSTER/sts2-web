@@ -6,7 +6,7 @@ on:
       tag:
         description: Android release tag
         required: true
-        default: android-v0.6.0
+        default: android-v0.7.0
   push:
     tags: ['android-*']
 

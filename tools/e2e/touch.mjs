@@ -1,3 +1,4 @@
+import { initAndroid } from './start.mjs';
 // Touch regressions: held status tips, cancelling a card, and dragging cards to play.
 // CHROME=<path> [URL=<server>] [PORTRAIT=1] node tools/e2e/touch.mjs <outDir>
 import assert from 'node:assert/strict';
@@ -12,6 +13,7 @@ const portrait = process.env.PORTRAIT === '1';
 const viewport = portrait ? { width: 540, height: 960 } : { width: 960, height: 540 };
 // The shared run-start helper uses landscape coordinates; rotate once combat is ready.
 const page = await browser.newPage({ viewport: { width: 960, height: 540 }, hasTouch: true, isMobile: true });
+await initAndroid(page);
 // In portrait the app rotates the 960 × 540 play area clockwise.
 const screenPoint = (x, y) => portrait ? { x: 540 - y, y: x } : { x, y };
 const errors = [], failures = [];

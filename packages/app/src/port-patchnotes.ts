@@ -3,6 +3,8 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
     date: '2026_10_10',
     eng: `[gold][b]Android animation transitions[/b][/gold]
+• Android APK uses a shared animation frame clock and creates effect canvases on demand.
+• Reuse bounded local text resources and export performance diagnostics from Settings.
 • Preserve card size and rotation when releasing a card to play; smoothly rearrange selected cards and finish shuffle flights.
 • Add visual feedback for repeated card plays and randomized costs.
 • Let rewards finish fading out and animate remaining rows after claiming a reward.
@@ -10,6 +12,8 @@ export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
 • Make turn banners follow game speed and cancel stale banners when combat ends.
 • Prepare the initial battle picture before revealing it; keep scene animation mixing and effects on the frame clock.`,
     zhs: `[gold][b]Android 动画衔接[/b][/gold]
+• Android APK 使用统一动画时钟，特效画布按需创建，空闲停止绘制。
+• 小文本资源有界复用，设置可导出性能诊断报告。
 • 松手出牌保留卡牌尺寸与角度，选牌重排和洗牌收尾连续变化。
 • 补充重复出牌和随机费用变化的视觉反馈。
 • 奖励窗口淡出完成后再移除，领取后剩余奖励平滑重排。

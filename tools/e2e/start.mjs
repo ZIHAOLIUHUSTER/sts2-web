@@ -67,3 +67,12 @@ export async function travel(page) {
   await page.mouse.down();
   await page.mouse.up();
 }
+
+/** Exercise the actual APK path using a local bridge mock, without invoking Android. */
+export async function initAndroid(page) {
+  if (process.env.APK !== "1") return;
+  await page.addInitScript(() => {
+    window.Sts2Android = { getDiagnostics: () => JSON.stringify({ webView: "browser-test", androidSdk: 29 }),
+      exportBackup: (name, json) => { window.__exportedDiagnostic = { name, json }; window.dispatchEvent(new CustomEvent("sts2-backup-result", {detail: ""})); } };
+  });
+}
