@@ -14,7 +14,7 @@ import { transitionView } from './ui/transition';
 import { seenFtue, showFtue } from './ui/ftue';
 import { logicalRect, setTips, setTip, hoverTipsOf } from './ui/tooltip';
 import { closePauseMenu } from './ui/pause';
-import { spawnCombatBanner } from './ui/banners';
+import { spawnCombatBanner, clearCombatBanners } from './ui/banners';
 import { openChest, chestSkin, chestGold, playSpriteVfx, extinguishRestFire } from './render/scene';
 import { playCombatVfx, playItemThrow } from './render/cardfx';
 import { screenShake, screenRumble, screenShakeTrauma, hitStop } from './ui/screenshake';
@@ -395,12 +395,27 @@ export class CreatureView extends NCreature {
 
 export class CombatRoomView extends NCombatRoom {
   kind = 'combat';
+  /** Presentation only: creation of a room does not imply its first GPU frame is ready. */
+  visualReady: Promise<void>;
+  visualStatus = 'pending';
+  private resolveVisual!: () => void;
+  private visualTimeout: ReturnType<typeof setTimeout>;
+  finishVisualReady(status = 'ready') {
+    if (this.visualStatus !== 'pending') return;
+    this.visualStatus = status;
+    clearTimeout(this.visualTimeout);
+    this.createdAt = performance.now();
+    this.resolveVisual();
+  }
   /** NCreatureStateDisplay: creatures present in the room's first second animate in after a delay. */
   createdAt = performance.now();
   creatures = new Map<any, CreatureView>();
   private nodes = createCombatNodes();
   constructor(public room: any, public mode: number) {
     super();
+    this.visualReady = new Promise<void>(resolve => { this.resolveVisual = resolve; });
+    // Failed or stalled local assets must not trap gameplay behind the curtain forever.
+    this.visualTimeout = setTimeout(() => this.finishVisualReady('timeout'), 8000);
     // a raw scene instance added to CombatVfxContainer (PackedScene.Instantiate stamps its SceneFilePath:
     // DecimillipedeSegment's rocks) plays there like VfxCmd.PlayVfx once its GlobalPosition is set
     const vfx = this.nodes.vfx, add = vfx.AddChild.bind(vfx);
@@ -442,7 +457,7 @@ export class CombatRoomView extends NCombatRoom {
   get Ui(): CombatUiView { return this.nodes.ui; }
   /** Flying cards and their trails pass under the combat UI. */
   get CombatVfxContainer(): ContainerNode { return this.nodes.vfx; }
-  dispose() { this.nodes.ui.destroy(); this.nodes.vfx.QueueFree(); for (const v of [...this.creatures.values(), ...this.removingNodes.values()]) v.detach(); }
+  dispose() { this.finishVisualReady('cancelled'); this.nodes.ui.destroy(); this.nodes.vfx.QueueFree(); for (const v of [...this.creatures.values(), ...this.removingNodes.values()]) v.detach(); }
   // a CombatRoom, or (combat-layout events) an ICombatRoomVisuals with just Encounter/Allies/Enemies/Act
   get combatState() { return this.room?.CombatState ?? this.room; }
   GetCreatureNode(c: any) {
@@ -1297,6 +1312,12 @@ export class RewardsView extends NRewardsScreen {
       this.fade?.CustomStep(1e3);
       this.fade = play(this, new $.WebTween());
       this.fade.TweenProperty(this.fx, 'win_a', 0, 0.25);
+      invalidate();
+      const fade = this.fade;
+      return new Promise<void>((done) => {
+        const stop = $.onFrame(() => { if (!fade.IsValid()) { done(); return false; } });
+        fade.whenFinished(() => { stop(); done(); });
+      });
     }
     invalidate();
   }
@@ -1926,6 +1947,16 @@ export function installBridge() {
   NMapScreen.Instance = mapView;
   NOverlayStack.Instance = new OverlayStackView();
   fillSingletons();
+  transitionView.waitForRoomVisuals = async () => { await NCombatRoom.Instance?.visualReady; };
+  const manager = G.CombatManager.Instance;
+  const afterRoomLoaded = manager.AfterCombatRoomLoaded.bind(manager);
+  manager.AfterCombatRoomLoaded = () => {
+    const room = NCombatRoom.Instance;
+    if (!room?.visualReady) { afterRoomLoaded(); return; }
+    void room.visualReady.then(() => {
+      if (NCombatRoom.Instance === room && room.visualStatus !== 'cancelled' && manager.DebugOnlyGetState() === room.combatState) afterRoomLoaded();
+    });
+  };
   // Godot scene/texture preloading has no web equivalent: assets stream on demand
   for (const k of Object.getOwnPropertyNames(G.PreloadManager)) if (/^Load/.test(k) && typeof G.PreloadManager[k] === 'function') G.PreloadManager[k] = () => $.Task.CompletedTask;
   // DailyRunUtility.UploadScore goes to a platform leaderboard: keep the day's first score locally instead
@@ -1952,6 +1983,7 @@ export function installBridge() {
   // NCombatUi.AnimOut (CombatEnded): the hand sinks away and the play queue gives its cards back; NCreature.OnCombatEnded
   // clears the orbs
   G.CombatManager.Instance.CombatEnded = $.dcombine(G.CombatManager.Instance.CombatEnded, () => {
+    clearCombatBanners();
     for (const v of creatureViewsRef.get()) (v as any).OrbManager?.ClearOrbs();
     const u = NCombatRoom.Instance?.Ui;
     u?.Hand?.AnimOut?.();

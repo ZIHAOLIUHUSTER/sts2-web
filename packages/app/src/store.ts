@@ -43,6 +43,9 @@ export function leaveScreen() { if (ui.subscreen) ui.subscreen = null; else ui.s
 // fades in (0.5 s Cubic Out) for the first overlay and out when the last leaves; stacked screens switch it instantly.
 // Screens hear AfterOverlayOpened / Shown / Hidden / Closed; a screen without its own Hidden / Shown is hidden.
 export const backstop = { A: 0 };
+/** Removed from the logical stack immediately; retained only for an opted-in noninteractive exit animation. */
+export const retiringOverlays = new Set<any>();
+const retirementGeneration = new WeakMap<object, number>();
 let backstopTween: any = null;
 function paintBackstop() { const el = document.querySelector<HTMLElement>('.overlay-backstop'); if (el) el.style.opacity = String(backstop.A); }
 function setBackstop(a: number) { backstopTween?.Kill(); backstopTween = null; backstop.A = a; paintBackstop(); invalidate(); }
@@ -56,7 +59,7 @@ function fadeBackstop(a: number) {
 const sharedBackstop = (o: any) => o?.UseSharedBackstop ?? true;
 const topOverlay = () => ui.overlays[ui.overlays.length - 1] ?? null;
 const shown = (o: any) => { if (o.AfterOverlayShown) o.AfterOverlayShown(); else o.$hidden = false; };
-const hidden = (o: any) => { if (o.AfterOverlayHidden) o.AfterOverlayHidden(); else o.$hidden = true; };
+const hidden = (o: any) => { if (o.AfterOverlayHidden) return o.AfterOverlayHidden(); o.$hidden = true; };
 export function showBackstop() { const o = topOverlay(); if (!o || sharedBackstop(o)) fadeBackstop(1); }
 export function hideBackstop() {
   const o = topOverlay();
@@ -64,6 +67,8 @@ export function hideBackstop() {
   if (ui.overlays.length <= 1) fadeBackstop(0); else setBackstop(0);
 }
 export function pushOverlay(o: any) {
+  retiringOverlays.delete(o);
+  retirementGeneration.set(o, (retirementGeneration.get(o) ?? 0) + 1);
   const prev = topOverlay();
   if (prev) hidden(prev);
   ui.overlays.push(o);
@@ -77,7 +82,17 @@ export function pushOverlay(o: any) {
 export function popOverlay(o: any) {
   if (!ui.overlays.includes(o)) return;
   const wasTop = o === topOverlay();
-  if (wasTop) { hideBackstop(); hidden(o); }
+  const exit = wasTop ? (hideBackstop(), hidden(o)) : null;
+  if (exit?.then) {
+    retiringOverlays.add(o);
+    const generation = (retirementGeneration.get(o) ?? 0) + 1;
+    retirementGeneration.set(o, generation);
+    const finish = () => {
+      if (retirementGeneration.get(o) === generation) retiringOverlays.delete(o);
+      invalidate();
+    };
+    void Promise.resolve(exit).then(finish, finish);
+  }
   o.AfterOverlayClosed?.();
   ui.overlays = ui.overlays.filter((x) => x !== o);
   if (wasTop) {

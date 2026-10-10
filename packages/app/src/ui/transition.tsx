@@ -44,6 +44,7 @@ function play(t: any): Promise<void> {
 
 export const transitionView = {
   InTransition: false,
+  waitForRoomVisuals: async () => {},
   async RoomFadeOut() {
     this.InTransition = true;
     setTip(null); pinTips(null); // departing owners may never receive a pointer-leave event
@@ -61,6 +62,7 @@ export const transitionView = {
     await play(t);
   },
   async RoomFadeIn(_showTransition = true) {
+    await this.waitForRoomVisuals();
     const F = G.FastModeType, mode = fastMode();
     s.visible = mode !== F.Instant;
     s.Th = 0;

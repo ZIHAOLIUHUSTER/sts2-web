@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { G, $, list } from '../game';
-import { ui, invalidate, backstop } from '../store';
+import { ui, invalidate, backstop, retiringOverlays } from '../store';
 import { frameByName, frameStyle, imageUrl, anyImage, atlasFrame, maskStyle } from '../assets';
 import { playOneShot } from '../audio';
 import { loc } from '../i18n';
@@ -47,18 +47,21 @@ function flipped(src: string) {
 
 // ------------------------------------------------------------------ the stack
 export function OverlayLayer({ fallback }: { fallback: (o: any) => any }) {
-  const n = ui.overlays.length;
-  return (
-    <>
-      {ui.overlays.map((o, i) => (
-        <>
-          {i === n - 1 && <div class="overlay-backstop" style={{ opacity: backstop.A }} />}
-          <OverlayScreen o={o} fallback={fallback} key={o.$key ??= Math.random()} />
-        </>
-      ))}
-    </>
-  );
+  // The same keyed parent owns a live screen and its retiring presentation: no remount or entrance replay.
+  const layers = [...retiringOverlays, ...ui.overlays];
+  const top = ui.overlays.at(-1);
+  return <>{layers.map((o) => {
+    const retiring = retiringOverlays.has(o);
+    const block = (e: Event) => { if (retiring) { e.preventDefault(); e.stopPropagation(); } };
+    return <div key={o.$key ??= Math.random()} class={retiring ? 'retiring-overlay' : 'overlay-layer'}
+      style={{ pointerEvents: retiring ? 'none' : undefined }} inert={retiring}
+      onPointerDownCapture={block} onPointerUpCapture={block} onClickCapture={block}>
+      {!retiring && o === top && <div key="backstop" class="overlay-backstop" style={{ opacity: backstop.A }} />}
+      <OverlayScreen key="screen" o={o} fallback={fallback} />
+    </div>;
+  })}</>;
 }
+
 function OverlayScreen({ o, fallback }: { o: any; fallback: (o: any) => any }) {
   if (o.$hidden) return null;
   if (o instanceof RewardsView) return <RewardsScreen v={o} />;
@@ -104,14 +107,40 @@ function RewardsScreen({ v }: { v: RewardsView }) {
     w.style.filter = v.fx.WinV < 1 ? `brightness(${v.fx.WinV})` : '';
     w.style.translate = `0 ${v.fx.WinY}px`;
   });
+  // Keep logical rewards immediate; animate removed DOM snapshots and surviving rows independently.
+  const previousRows = useRef(new Map<any, { el: HTMLElement; y: number }>());
+  const rowEffects = useRef(new Set<HTMLElement>());
+  useLayoutEffect(() => {
+    const root = listEl.current;
+    if (!root) return;
+    const current = new Map<any, { el: HTMLElement; y: number }>();
+    const rows = Array.from(root.children).filter((e) => !(e as HTMLElement).dataset.retiring) as HTMLElement[];
+    v.buttons.forEach((b, i) => { if (rows[i]) current.set(b, { el: rows[i], y: rows[i].offsetTop }); });
+    for (const [b, old] of previousRows.current) {
+      const row = current.get(b);
+      if (row) {
+        const dy = old.y - row.y;
+        if (dy) row.el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], { duration: 180, easing: EXPO_OUT });
+      } else {
+        const ghost = old.el.cloneNode(true) as HTMLElement;
+        ghost.dataset.retiring = '1'; ghost.inert = true;
+        Object.assign(ghost.style, { position: 'absolute', top: `${old.y}px`, left: '0', pointerEvents: 'none' });
+        root.appendChild(ghost); rowEffects.current.add(ghost);
+        const anim = ghost.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.96)' }], { duration: 180, easing: EXPO_OUT, fill: 'forwards' });
+        void anim.finished.finally(() => { ghost.remove(); rowEffects.current.delete(ghost); }).catch(() => {});
+      }
+    }
+    previousRows.current = current;
+  }, [v.buttons]);
+  useEffect(() => () => { for (const e of rowEffects.current) e.remove(); rowEffects.current.clear(); }, []);
   const h = rewardListHeight(v.buttons), canScroll = h >= 400, bottom = 35 - h + 400;
   // NRewardsScreen.UpdateScrollPosition: lerp to the target (dt·15), spring back past the ends (dt·12)
   useEffect(() => $.onFrame((dt: number) => {
     const s = v.scroll;
     if (Math.abs(s.y - s.target) > 0.01) { s.y += (s.target - s.y) * Math.min(1, dt * 15); if (Math.abs(s.y - s.target) < 0.5) s.y = s.target; }
     const b = 35 - rewardListHeight(v.buttons) + 400;
-    if (s.target < Math.min(b, 0)) s.target += (b - s.target) * dt * 12;
-    else if (s.target > Math.max(b, 0)) s.target += (35 - s.target) * dt * 12;
+    if (s.target < Math.min(b, 0)) s.target += (b - s.target) * Math.min(1, dt * 12);
+    else if (s.target > Math.max(b, 0)) s.target += (35 - s.target) * Math.min(1, dt * 12);
     if (listEl.current) listEl.current.style.top = `${s.y}px`;
   }), [v]);
   const mugged = safe(() => v.runState.CurrentRoom.GoldProportion < 1, false);

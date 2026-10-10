@@ -20,6 +20,7 @@ const vignetteApp = () => (appP ??= (async () => {
   const a = new Application();
   await a.init({ width: 1920, height: 1080, backgroundAlpha: 0, antialias: false, autoStart: false, resolution: renderResolution(), autoDensity: true });
   a.canvas.classList.add('hurt-vignette');
+  a.canvas.style.visibility = 'hidden';
   fullView(a, true);
   return a;
 })());
@@ -47,6 +48,9 @@ export function HurtVignette() {
         alpha: 1, alpha_multiplier: 0, inner_radius: 0.5, outer_radius: 1.75, noise: noise ?? Texture.WHITE, noise_tiling: [1, 3], noise_panning: [-3, 0],
         noise_initial_offset: [0, 0], noise_additional_offset: 0, smoothstep_factors: [0.1, 0.8], main_color: [...C1, 1],
       });
+      // Upload a valid transparent quad before the first render, including at the default viewport size.
+      quad.quad(0, corners(), 0, 0, 1, 1, 1, 1, 1, 0);
+      quad.flush();
       a.stage.addChild(quad);
       a.render();
     });
@@ -61,16 +65,19 @@ export function HurtVignette() {
       quad.quad(0, corners(), 0, 0, 1, 1, 1, 1, 1, 0.7529); // the border of the screen as it is now
       quad.flush();
       app.render();
+      app.canvas.style.visibility = 'visible';
       state.t += dt;
       if (p < 1) return true;
       state.playing = false;
+      app.canvas.style.visibility = 'hidden';
       return false;
     });
     return () => {
       dead = true;
       state.start = null;
+      state.playing = false;
       quad?.destroy();
-      void vignetteApp().then((a) => { a.stage.removeChildren(); a.render(); if (a.canvas.parentElement === host.current) a.canvas.remove(); });
+      void vignetteApp().then((a) => { a.canvas.style.visibility = 'hidden'; a.stage.removeChildren(); a.render(); if (a.canvas.parentElement === host.current) a.canvas.remove(); });
     };
   }, []);
   return <div class="hurt-vignette-host" ref={host} />;

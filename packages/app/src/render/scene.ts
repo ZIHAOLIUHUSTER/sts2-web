@@ -42,6 +42,16 @@ export function sceneIndex(): Promise<string[]> {
   return (index ??= fetch(`${A}scenes/index.json`).then((r) => r.json()).catch(() => []));
 }
 
+// Await only resources belonging to the scene being entered; no global preload.
+const pendingScene = new WeakMap<Container, Promise<unknown>>();
+function loading(holder: Container, work: Promise<unknown>) {
+  pendingScene.set(holder, work.catch((error) => { console.warn('scene resource', error); }));
+}
+export async function sceneReady(root: Container): Promise<void> {
+  await pendingScene.get(root);
+  if (!root.destroyed) await Promise.all(root.children.map((child) => sceneReady(child)));
+}
+
 const M = (m: number[]) => new Matrix(m[0], m[1], m[2], m[3], m[4], m[5]);
 function trs(x: number, y: number, rot: number, sx: number, sy: number, piv: number[]) {
   return new Matrix().translate(-piv[0], -piv[1]).scale(sx, sy).rotate(rot).translate(x + piv[0], y + piv[1]);
@@ -80,7 +90,7 @@ function quad(it: any): Container {
   holder.addChild(sp);
   if (it.color) { sp.tint = ((it.color[0] * 255) << 16) | ((it.color[1] * 255) << 8) | (it.color[2] * 255); sp.alpha = it.color[3]; }
   if (it.blend) sp.blendMode = BLEND[it.blend];
-  itemTexture(it).then((t) => {
+  loading(holder, itemTexture(it).then((t) => {
     if (!t || sp.destroyed) return;
     let tex = t;
     const k = t.width / (it.tw || t.width); // downscale factor of the web asset vs the original texture
@@ -100,7 +110,7 @@ function quad(it: any): Container {
     sp.width = w; sp.height = h;
     if (it.flipH) sp.scale.x *= -1;
     if (it.flipV) sp.scale.y *= -1;
-  });
+  }));
   return holder;
 }
 
@@ -127,7 +137,7 @@ async function itemShader(it: any) {
 function shaderQuad(it: any): Container {
   const holder = new Container();
   holder.setFromMatrix(M(it.m));
-  Promise.all([itemTexture(it), itemShader(it), shaderParams(it.shader?.params)]).then(([t, sh, params]) => {
+  loading(holder, Promise.all([itemTexture(it), itemShader(it), shaderParams(it.shader?.params)]).then(([t, sh, params]) => {
     if (!t || !sh || holder.destroyed) return;
     const q = new QuadBatch(1, sh, t, params);
     q.fresh = !!it.bbc; // under a BackBufferCopy
@@ -140,7 +150,7 @@ function shaderQuad(it: any): Container {
     q.flush();
     if (it.blend) q.blendMode = BLEND[it.blend];
     holder.addChild(q);
-  });
+  }));
   return holder;
 }
 
@@ -163,7 +173,7 @@ export { texture as sceneTexture };
 export function particleItem(it: any, emit = false, onDone?: () => void): Container {
   const holder = new Container();
   holder.setFromMatrix(M(it.m));
-  Promise.all([itemTexture(it), itemShader(it), shaderParams(it.shader?.params)]).then(([t, sh, params]) => {
+  loading(holder, Promise.all([itemTexture(it), itemShader(it), shaderParams(it.shader?.params)]).then(([t, sh, params]) => {
     if (!t || !sh || holder.destroyed) { onDone?.(); return; }
     const e = new Emitter(it, t, sh, params, emit || it.emitting);
     e.batch.fresh = !!it.bbc; // under a BackBufferCopy
@@ -172,7 +182,7 @@ export function particleItem(it: any, emit = false, onDone?: () => void): Contai
     if (it.blend && !it.shader) e.batch.blendMode = BLEND[it.blend];
     holder.addChild(e.batch);
     if (onDone) { const check = setInterval(() => { if (e.done || holder.destroyed) { clearInterval(check); onDone(); } }, 250); }
-  });
+  }));
   return holder;
 }
 
@@ -187,18 +197,19 @@ function spineItem(it: any, onSpine?: (sp: Spine) => void): Container {
     Assets.add({ alias: key + ':atlas', src: A + it.spine.atlas });
     spineLoads.set(key, (p = Assets.load([key + ':skel', key + ':atlas']).then(() => true).catch(() => false)));
   }
-  p.then((ok) => {
+  loading(holder, p.then((ok) => {
     if (!ok || holder.destroyed) return;
     const sp = Spine.from({ skeleton: key + ':skel', atlas: key + ':atlas', scale: 1 });
+    sp.state.data.defaultMix = it.spine.mix ?? 0;
     try { if (it.skin && sp.skeleton.data.findSkin(it.skin)) sp.skeleton.setSkinByName(it.skin); } catch { /* default skin */ }
     const names = sp.skeleton.data.animations.map((a: any) => a.name);
     const anim = names.includes(it.anim) ? it.anim : names.find((n: string) => /idle|loop/i.test(n)) ?? names[0];
     if (anim) sp.state.setAnimation(0, anim, true);
     if (it.color) sp.alpha = it.color[3];
-    if (it.mats || it.slotMats) void slotMats(sp).install(it); // SpineSprite / SpineSlotNode materials (render/slotmats)
+    if (it.mats || it.slotMats) loading(sp, slotMats(sp).install(it)); // SpineSprite / SpineSlotNode materials (render/slotmats)
     holder.addChild(sp);
     onSpine?.(sp);
-  });
+  }));
   return holder;
 }
 
@@ -311,7 +322,7 @@ export function attachCreatureFx(root: Container, s: SceneData, sp: Spine | null
   root.addChildAt(boneFront, root.getChildIndex(sp) + 1);
   for (const [slot, c] of slots) { try { sp.addSlotObject(slot, c); } catch { c.destroy({ children: true }); } }
   // SpineSprite / SpineSlotNode materials (render/slotmats)
-  void slotMats(sp).install(s.items.find((it) => it.k === 'spine' && !it.slot && !it.bone));
+  loading(sp, slotMats(sp).install(s.items.find((it) => it.k === 'spine' && !it.slot && !it.bone)));
   if (!bones.size) return;
   const follow = [...bones].map(([k, c]) => [sp.skeleton.findBone(k.split('|')[0]), c] as const).filter(([b]) => b);
   const prev = sp.afterUpdateWorldTransforms;
@@ -709,15 +720,24 @@ async function flipbook(root: Container, it: any, done: () => void) {
   if (it.color) { sp.tint = ((it.color[0] * 255) << 16) | ((it.color[1] * 255) << 8) | (it.color[2] * 255); sp.alpha = it.color[3]; }
   holder.addChild(sp);
   root.addChild(holder);
-  let i = 0;
-  const timer = setInterval(() => {
-    if (sp.destroyed) { clearInterval(timer); return; }
-    i++;
-    if (i >= frames.length && !it.anim.loop) { clearInterval(timer); done(); return; }
-    sp.texture = frames[i % frames.length];
-    sp.width = it.w; sp.height = it.h;
-  }, Math.round(1000 / (it.anim.fps || 15)));
-  if (it.anim.loop) setTimeout(() => { clearInterval(timer); done(); }, 1500);
+  let elapsed = 0, previous = 0, resumed = false;
+  const visibility = () => { resumed = true; };
+  document.addEventListener('visibilitychange', visibility);
+  const finish = () => { document.removeEventListener('visibilitychange', visibility); done(); };
+  $.onFrame((dt: number) => {
+    if (sp.destroyed) { document.removeEventListener('visibilitychange', visibility); return false; }
+    if (document.hidden) return true;
+    if (resumed) { dt = 0; resumed = false; }
+    elapsed += dt;
+    const index = Math.floor(elapsed * (it.anim.fps || 15));
+    if ((!it.anim.loop && index >= frames.length) || (it.anim.loop && elapsed >= 1.5)) { finish(); return false; }
+    if (index !== previous) {
+      previous = index;
+      sp.texture = frames[index % frames.length];
+      sp.width = it.w; sp.height = it.h;
+    }
+    return true;
+  });
 }
 
 // ------------------------------------------------------------------ main menu

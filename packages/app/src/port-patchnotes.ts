@@ -1,6 +1,23 @@
 /** Web port updates, newest first. Add both languages here; original game notes remain in assets/patch_notes. */
 export const portPatchNotes: { date: string; eng: string; zhs: string }[] = [
   {
+    date: '2026_10_10',
+    eng: `[gold][b]Android animation transitions[/b][/gold]
+• Preserve card size and rotation when releasing a card to play; smoothly rearrange selected cards and finish shuffle flights.
+• Add visual feedback for repeated card plays and randomized costs.
+• Let rewards finish fading out and animate remaining rows after claiming a reward.
+• Keep the hurt border transparent while inactive to prevent a white layer covering combat.
+• Make turn banners follow game speed and cancel stale banners when combat ends.
+• Prepare the initial battle picture before revealing it; keep scene animation mixing and effects on the frame clock.`,
+    zhs: `[gold][b]Android 动画衔接[/b][/gold]
+• 松手出牌保留卡牌尺寸与角度，选牌重排和洗牌收尾连续变化。
+• 补充重复出牌和随机费用变化的视觉反馈。
+• 奖励窗口淡出完成后再移除，领取后剩余奖励平滑重排。
+• 修正未播放的受伤边缘特效遮住战斗画面的问题。
+• 回合横幅跟随游戏速度，战斗结束取消过时横幅。
+• 战斗初始画面准备好后揭幕，恢复场景动作混合，特效使用逐帧时钟。`,
+  },
+  {
     date: '2026_10_09',
     eng: `[gold][b]Android[/b][/gold]
 • Added an experimental debug APK build for trying the web port on Android.

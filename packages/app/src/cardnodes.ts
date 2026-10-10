@@ -67,6 +67,13 @@ export function Web<B extends new (...a: any[]) => any>(Base: B) {
       const c = Math.cos(-p.rot), s = Math.sin(-p.rot), dx = g.X - p.x, dy = g.Y - p.y;
       this.Position = v2((dx * c - dy * s) / (p.sx || 1), (dx * s + dy * c) / (p.sy || 1));
     }
+    /** Restore the complete visible pose after a rule-layer RemoveChild/AddChild sequence. */
+    restoreGlobalPose(g: Xf) {
+      this.GlobalPosition = v2(g.x, g.y);
+      const p: Xf | null = this.$parent?.xf?.() ?? null;
+      this.Rotation = g.rot - (p?.rot ?? 0);
+      this.Scale = v2(g.sx / (p?.sx || 1), g.sy / (p?.sy || 1));
+    }
     /** Product of the modulates down the tree (Godot's CanvasItem modulate inheritance). */
     modulate(): number[] {
       const p = this.$parent?.modulate?.() ?? [1, 1, 1, 1], m = this.Modulate;
@@ -244,8 +251,20 @@ export class CardNodeView extends Web(NCard) {
     v.Scale = v2(2, 2);
     v.Position = v2(0, 0);
   }
-  PlayRandomizeCostAnim() {}
-  AnimMultiCardPlay() { return $.Task.CompletedTask; }
+  private feedbackTw: any = null;
+  PoseTween: any = null;
+  StopPoseTween() { this.PoseTween?.Kill(); this.PoseTween = null; }
+  PlayRandomizeCostAnim() { this.CardHighlight.AnimFlash(); this.pulseBody(); }
+  AnimMultiCardPlay() { this.CardHighlight.AnimFlash(); this.pulseBody(); return $.Task.CompletedTask; }
+  /** Presentation-only pulse: replay feedback never adds a rule-layer wait. */
+  private pulseBody() {
+    this.feedbackTw?.Kill();
+    this.feedbackTw = tween();
+    this.feedbackTw.TweenProperty(this.Body, 'scale', v2(1.06, 1.06), 0.06).SetEase(1).SetTrans(7);
+    this.feedbackTw.TweenProperty(this.Body, 'scale', v2(1, 1), 0.1).SetEase(1).SetTrans(7);
+  }
+  StopFeedback() { this.feedbackTw?.Kill(); this.feedbackTw = null; }
+  QueueFree() { this.StopFeedback(); this.StopPoseTween(); super.QueueFree(); }
   /** NCard.AnimCardToPlayPile. */
   AnimCardToPlayPile() {
     const target = G.PileTypeExtensions.GetTargetPosition(G.PileType.Play, this);
@@ -315,7 +334,6 @@ export class HolderView extends Web(NHandCardHolder) {
     else node.Reparent(this);
     node.Position = v2(); // NCardHolder.ConnectSignals
     for (const e of CARD_EVENTS) node.Model[e] = $.dcombine(node.Model[e], this.onFlash);
-    if (node.Scale.X !== 1 || node.Scale.Y !== 1) tween().TweenProperty(node, 'scale', v2(1, 1), 0.25);
     this.UpdateCard();
   }
   Clear() {
@@ -455,10 +473,15 @@ export class HandView extends Web(NPlayerHand) {
   GetCard(card: any) { return this.GetCardHolder(card)?.CardNode ?? null; }
   IsAwaitingPlay(h: HolderView) { return this.awaiting.has(h); }
   Add(card: CardNodeView, index = -1) {
-    const g = card.GlobalPosition;
+    card.StopPoseTween();
+    const g = card.xf();
     const h = new HolderView(card, this);
     this.AddCardHolder(h, index);
-    h.GlobalPosition = g;
+    h.GlobalPosition = v2(g.x, g.y);
+    card.restoreGlobalPose(g);
+    const settle = card.PoseTween = tween().SetParallel(true);
+    settle.TweenProperty(card, 'scale', v2(1, 1), 0.18).SetEase(1).SetTrans(7);
+    settle.TweenProperty(card, 'rotation', 0, 0.18).SetEase(1).SetTrans(7);
     this.RefreshLayout();
     return h;
   }
@@ -758,6 +781,13 @@ const NSelectedHandCardHolder = N('Cards.Holders.NSelectedHandCardHolder');
 export class SelectedHolderView extends Web(NSelectedHandCardHolder) {
   CardNode: CardNodeView | null = null;
   private tw: any = null;
+  private rowTw: any = null;
+  MoveTo(p: any) {
+    this.rowTw?.Kill();
+    this.rowTw = tween();
+    this.rowTw.TweenProperty(this, 'position', p, 0.18).SetEase(1).SetTrans(7);
+  }
+  QueueFree() { this.tw?.Kill(); this.rowTw?.Kill(); super.QueueFree(); }
   constructor(public container: SelectedContainerView) { super(); this.Scale = v2(0.8, 0.8); }
   get CardModel() { return this.CardNode?.Model ?? null; }
   SetCard(node: CardNodeView) {
@@ -771,9 +801,8 @@ export class SelectedHolderView extends Web(NSelectedHandCardHolder) {
   }
   focus(on: boolean) {
     this.tw?.Kill();
-    if (on) { this.Scale = v2(1, 1); return; }
     this.tw = tween();
-    this.tw.TweenProperty(this, 'scale', v2(0.8, 0.8), 0.5).SetEase(1).SetTrans(5);
+    this.tw.TweenProperty(this, 'scale', on ? v2(1, 1) : v2(0.8, 0.8), 0.16).SetEase(1).SetTrans(7);
   }
 }
 /** NSelectedHandCardContainer: the picks in a centred row 300 apart; the row shrinks and rises as it fills. */
@@ -783,20 +812,23 @@ export class SelectedContainerView extends ContainerNode {
   get Holders(): SelectedHolderView[] { return this.$kids.filter((k: any) => k instanceof SelectedHolderView); }
   Add(orig: HolderView) {
     const card = orig.CardNode!;
-    const g = card.GlobalPosition;
+    card.StopPoseTween();
+    const g = card.xf();
     const h = new SelectedHolderView(this);
     this.AddChild(h);
     h.SetCard(card);
     this.RefreshHolderPositions();
-    card.GlobalPosition = g;
-    card.Rotation = 0;
-    tween().TweenProperty(card, 'position', v2(0, 0), 0.15).SetEase(1).SetTrans(7);
+    card.restoreGlobalPose(g);
+    const settle = card.PoseTween = tween().SetParallel(true);
+    settle.TweenProperty(card, 'position', v2(0, 0), 0.18).SetEase(1).SetTrans(7);
+    settle.TweenProperty(card, 'rotation', 0, 0.18).SetEase(1).SetTrans(7);
+    settle.TweenProperty(card, 'scale', v2(1, 1), 0.18).SetEase(1).SetTrans(7);
     return h;
   }
   RefreshHolderPositions() {
     const hs = this.Holders;
     let x = (-300 * (hs.length - 1)) / 2;
-    for (const h of hs) { h.Position = v2(x, 0); x += 300; }
+    for (const h of hs) { h.MoveTo(v2(x, 0)); x += 300; }
   }
   /** Clicking a picked card (DeselectHolder). */
   DeselectHolder(h: SelectedHolderView) {
@@ -1387,6 +1419,7 @@ export class CardFlyVfx extends Web(NCardFlyVfx) {
   $entered() {
     if (this.trail) return;
     const card = this.card, start = card.GlobalPosition;
+    card.StopFeedback(); card.StopPoseTween();
     this.trail = new TrailVfx(card, trailOf(this.trailPath));
     const arc = this.end.Y < 540 ? -500 : 500 + rand(100, 400);
     let speed = rand(1.1, 1.25);
@@ -1470,7 +1503,7 @@ export class ShuffleFlyVfx extends Web(NCardFlyShuffleVfx) {
       }
       if (time / dur <= 1) {
         if (time / dur > 0.25 && !fading) { fading = true; void this.trail?.FadeOut(); }
-        const s = Math.max(lerp(0.1, -0.1, time / dur), 0);
+        const s = Math.max(1 - time / dur, 0);
         this.Scale = v2(s, s);
         return;
       }
@@ -1622,6 +1655,7 @@ export class CardFlyPowerVfx extends Web(NCardFlyPowerVfx) {
   GetDuration() { return this.curve.total / 3000 + 0.05; }
   async PlayAnim() {
     const card = this.CardNode, dur = this.curve.total / 3000;
+    card.StopFeedback(); card.StopPoseTween();
     tween().TweenProperty(card, 'scale', v2(0.1, 0.1), 0.3);
     let acc = 0, shrinking = false;
     while (acc < dur) {
@@ -1642,3 +1676,24 @@ export class CardFlyPowerVfx extends Web(NCardFlyPowerVfx) {
   }
 }
 NCardFlyPowerVfx.Create = (card: any) => (G.TestMode.IsOn || !(card instanceof CardNodeView) ? null : new CardFlyPowerVfx(card));
+
+/** The rules preserve only GlobalPosition while detaching the holder; retain its scale/rotation too.
+ * Wrap the presentation helper rather than modifying generated rule code or pile transactions. */
+const moveBeforeTween = G.CardPileCmd.MoveCardNodeToNewPileBeforeTween;
+if (!moveBeforeTween.$webPreservesPose) {
+  const wrapped = function(this: any, card: any, pile: number) {
+    if (card?.$freed) return;
+    card?.StopPoseTween?.();
+    const pose = card?.restoreGlobalPose ? card.xf() : null;
+    moveBeforeTween.call(this, card, pile);
+    if (pose && !card.$freed) {
+      card.restoreGlobalPose(pose);
+      if (pile === G.PileType.Play) {
+        card.PoseTween = tween();
+        card.PoseTween.TweenProperty(card, 'rotation', 0, 0.18).SetEase(1).SetTrans(7);
+      }
+    }
+  };
+  wrapped.$webPreservesPose = true;
+  G.CardPileCmd.MoveCardNodeToNewPileBeforeTween = wrapped;
+}

@@ -8,15 +8,21 @@ import { loc, locv } from '../i18n';
 
 const TR = { Sine: 1, Expo: 5, Cubic: 7 }, EZ = { Out: 1 };
 type Kind = 'start' | 'player' | 'enemy';
-interface Banner { id: number; kind: Kind; round: number; extra: boolean }
+interface Banner { id: number; kind: Kind; round: number; extra: boolean; speed: number }
 const banners: Banner[] = [];
 let ids = 0;
 export function spawnCombatBanner(kind: Kind, round = 0) {
+  const mode = (() => { try { return G.SaveManager.Instance.PrefsSave.FastMode; } catch { return G.FastModeType.Normal; } })();
+  // Superseded banners must not advertise an old turn; Instant mode has no decorative delay.
+  const keepStart = kind === 'player' && round === 1;
+  for (let i = banners.length - 1; i >= 0; i--) if (!keepStart || banners[i].kind !== 'start') banners.splice(i, 1);
+  if (mode === G.FastModeType.Instant) { banners.length = 0; invalidate(); return; }
+  const speed = mode === G.FastModeType.Fast ? 0.5 : 1;
   const extra = kind === 'player' && (() => { try { return G.CombatManager.Instance.PlayersTakingExtraTurn.Count > 0; } catch { return false; } })();
-  banners.push({ id: ++ids, kind, round, extra });
+  banners.push({ id: ++ids, kind, round, extra, speed });
   invalidate();
 }
-export function clearCombatBanners() { banners.length = 0; }
+export function clearCombatBanners() { banners.length = 0; invalidate(); }
 const done = (b: Banner) => { const i = banners.indexOf(b); if (i >= 0) banners.splice(i, 1); invalidate(); };
 const debugPlay = (name: string) => { try { $.ext('MegaCrit.Sts2.Core.Audio.Debug.NDebugAudioManager').Instance?.Play(name); } catch { /* no audio */ } };
 /** Run `t`, calling `paint` every frame while it is valid; resolves when it finishes. */
@@ -33,6 +39,8 @@ export function CombatBanners() {
 function StartBanner({ b }: { b: Banner }) {
   const rect = useRef<HTMLDivElement>(null), label = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const d = (seconds: number) => seconds * b.speed;
+    let outro: any = null;
     const o = { RectA: 0, RectS: 1.2, LabelA: 0, LabelS: 2 };
     const paint = () => {
       if (rect.current) { rect.current.style.opacity = String(o.RectA); rect.current.style.scale = String(o.RectS); }
@@ -42,21 +50,21 @@ function StartBanner({ b }: { b: Banner }) {
     debugPlay(battleStart[Math.floor(Math.random() * battleStart.length)]);
     let alive = true;
     const t = new $.WebTween().SetParallel();
-    t.TweenInterval(0.3);
+    t.TweenInterval(d(0.3));
     t.Chain();
-    t.TweenProperty(o, 'rect_a', 0.5, 0.75).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'rect_s', 1, 0.75).SetEase(EZ.Out).SetTrans(TR.Expo).From(1.2);
-    t.TweenProperty(o, 'label_a', 1, 1.3).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'label_s', 1, 0.75).SetEase(EZ.Out).SetTrans(TR.Expo).From(2);
-    t.TweenProperty(o, 'label_a', 0, 1).SetEase(EZ.Out).SetTrans(TR.Cubic).SetDelay(1.3);
+    t.TweenProperty(o, 'rect_a', 0.5, d(0.75)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'rect_s', 1, d(0.75)).SetEase(EZ.Out).SetTrans(TR.Expo).From(1.2);
+    t.TweenProperty(o, 'label_a', 1, d(1.3)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'label_s', 1, d(0.75)).SetEase(EZ.Out).SetTrans(TR.Expo).From(2);
+    t.TweenProperty(o, 'label_a', 0, d(1)).SetEase(EZ.Out).SetTrans(TR.Cubic).SetDelay(d(1.3));
     void run(t, paint).then(() => {
       if (!alive) return;
       spawnCombatBanner('player', 1);
-      const t2 = new $.WebTween();
-      t2.TweenProperty(o, 'rect_a', 0, 1).SetEase(EZ.Out).SetTrans(TR.Cubic).SetDelay(1.5);
+      const t2 = (outro = new $.WebTween());
+      t2.TweenProperty(o, 'rect_a', 0, d(1)).SetEase(EZ.Out).SetTrans(TR.Cubic).SetDelay(d(1.5));
       return run(t2, paint).then(() => done(b));
     });
-    return () => { alive = false; t.Kill(); };
+    return () => { alive = false; t.Kill(); outro?.Kill(); };
   }, []);
   return (
     <div class="combat-banner">
@@ -70,6 +78,8 @@ function StartBanner({ b }: { b: Banner }) {
 function PlayerTurnBanner({ b }: { b: Banner }) {
   const root = useRef<HTMLDivElement>(null), label = useRef<HTMLDivElement>(null), turn = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const d = (seconds: number) => seconds * b.speed;
+    let outro: any = null;
     const o = { A: 0, LabelY: 0, TurnY: 0 };
     const paint = () => {
       if (root.current) root.current.style.opacity = String(o.A);
@@ -79,17 +89,17 @@ function PlayerTurnBanner({ b }: { b: Banner }) {
     debugPlay('player_turn.mp3');
     let alive = true;
     const t = new $.WebTween().SetParallel();
-    t.TweenProperty(o, 'a', 1, 1).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'label_y', -50, 1.5).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'turn_y', 50, 1.5).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'a', 1, d(1)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'label_y', -50, d(1.5)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'turn_y', 50, d(1.5)).SetEase(EZ.Out).SetTrans(TR.Expo);
     void run(t, paint).then(() => {
       if (!alive) return;
-      const t2 = new $.WebTween();
-      t2.TweenInterval(0.4);
-      t2.TweenProperty(o, 'a', 0, 0.3).SetEase(EZ.Out).SetTrans(TR.Sine);
+      const t2 = (outro = new $.WebTween());
+      t2.TweenInterval(d(0.4));
+      t2.TweenProperty(o, 'a', 0, d(0.3)).SetEase(EZ.Out).SetTrans(TR.Sine);
       return run(t2, paint).then(() => done(b));
     });
-    return () => { alive = false; t.Kill(); };
+    return () => { alive = false; t.Kill(); outro?.Kill(); };
   }, []);
   return (
     <div class="combat-banner" ref={root} style={{ opacity: 0 }}>
@@ -103,6 +113,7 @@ function PlayerTurnBanner({ b }: { b: Banner }) {
 function EnemyTurnBanner({ b }: { b: Banner }) {
   const root = useRef<HTMLDivElement>(null), label = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const d = (seconds: number) => seconds * b.speed;
     const o = { A: 0, S: 2, R: 0.937255, G: 0.784314, B: 0.317647 };
     const paint = () => {
       if (root.current) root.current.style.opacity = String(o.A);
@@ -110,13 +121,13 @@ function EnemyTurnBanner({ b }: { b: Banner }) {
     };
     debugPlay('enemy_turn.mp3');
     const t = new $.WebTween().SetParallel();
-    t.TweenProperty(o, 's', 1, 0.75).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'a', 1, 1.3).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 's', 1, d(0.75)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'a', 1, d(1.3)).SetEase(EZ.Out).SetTrans(TR.Expo);
     t.Chain();
-    t.TweenProperty(o, 'r', 1, 1).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'g', 0, 1).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'b', 0, 1).SetEase(EZ.Out).SetTrans(TR.Expo);
-    t.TweenProperty(o, 'a', 0, 1).SetEase(EZ.Out).SetTrans(TR.Cubic);
+    t.TweenProperty(o, 'r', 1, d(1)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'g', 0, d(1)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'b', 0, d(1)).SetEase(EZ.Out).SetTrans(TR.Expo);
+    t.TweenProperty(o, 'a', 0, d(1)).SetEase(EZ.Out).SetTrans(TR.Cubic);
     void run(t, paint).then(() => done(b));
     return () => t.Kill();
   }, []);

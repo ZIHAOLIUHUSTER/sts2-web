@@ -1,7 +1,7 @@
 // Combat screen: Pixi stage (backgrounds + Spine creatures) under a DOM layer (HP, intents, powers, hand, piles).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { CombatBanners, clearCombatBanners } from './banners';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { G, $, N, list } from '../game';
 import { ui } from '../store';
 import { CombatStage, layoutCreatures } from '../render/stage';
@@ -61,17 +61,26 @@ ftueHook.cannotPlay = () => showFtue('cannot_play_card_ftue', 'CANNOT_PLAY_CARD_
 
 /** Combat room; `visualOnly` (combat-layout events) shows the stage and creatures without the hand/energy UI. */
 export function CombatScreen({ view, visualOnly = false }: { view: any; visualOnly?: boolean }) {
+  const [readyView, setReadyView] = useState<any>(null);
   const host = useRef<HTMLDivElement>(null);
   const fxHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const st = new CombatStage(view);
-    combatBackdropFor(G, view.combatState, view.combatState?.RunState ?? G.RunManager.Instance.State).then((bg) => st.setBackground(bg));
-    st.mount(host.current!);
+    let cancelled = false;
+    const background = combatBackdropFor(G, view.combatState, view.combatState?.RunState ?? G.RunManager.Instance.State);
+    const reveal = () => { if (!cancelled) setReadyView(view); };
+    // The room owns the bounded readiness promise so transitions and rule presentation agree.
+    void view.visualReady.then(reveal);
+    const ready = st.mount(host.current!).then(() => st.ready(background));
+    ready.then(() => { if (!cancelled) view.finishVisualReady('ready'); }).catch((error) => {
+      console.warn('combat visual readiness', error);
+      if (!cancelled) view.finishVisualReady('failed');
+    });
     // VFX nodes in NCombatUi draw among its (DOM) cards, in FX slots; CombatVfxContainer's under the combat UI
     const fx = new CardFxCanvas('combat', (n) => !!n && (view.Ui.IsAncestorOf(n) || view.CombatVfxContainer.IsAncestorOf(n)), (n) => view.Ui.IsAncestorOf(n));
     if (!visualOnly) void fx.mount(fxHost.current!);
     // CombatStage sync follows Pixi's capped ticker, including background pause, rather than another 60 Hz loop.
-    return () => { st.destroy(); fx.destroy(); };
+    return () => { cancelled = true; st.destroy(); fx.destroy(); };
   }, [view]);
   usePointer(() => view.Ui?.Hand ?? null);
   const cs = view.combatState;
@@ -79,11 +88,13 @@ export function CombatScreen({ view, visualOnly = false }: { view: any; visualOn
   const me = cs?.Players?.[0] ?? G.RunManager.Instance.State?.Players?.[0];
   const pcs = me?.PlayerCombatState;
   const slots = cs ? layoutCreatures(cs) : new Map();
-  hotkeys = { hand: visualOnly ? null : view.Ui?.Hand ?? null };
+  const visible = readyView === view;
+  hotkeys = { hand: visualOnly || !visible ? null : view.Ui?.Hand ?? null };
   return (
-    <div class={'combat' + (arrow.visible ? ' targeting' : '') + (ui.gameOver ? ' gameover' : '')}>
+    <div class={'combat' + (arrow.visible ? ' targeting' : '') + (ui.gameOver ? ' gameover' : '')} style={{ visibility: visible ? undefined : 'hidden' }}>
       {/* CombatSceneContainer (the screen-shake target): background and creatures with their HP bars, intents, orbs */}
       <div class="stage-host" ref={host} data-shake />
+      {visible && <>
       <div class="creatures-layer" data-shake>
         {[...slots].map(([c, s]) => <CreatureOverlay key={keyOf(c)} c={c} s={s} node={view.GetCreatureNode(c)} fresh={performance.now() - view.createdAt < 1000} />)}
         {[...view.removing].filter(([c]) => !slots.has(c)).map(([c, s]) => <CreatureOverlay key={keyOf(c)} c={c} s={s} node={view.removingNodes.get(c)} fresh={false} removing />)}
@@ -96,8 +107,9 @@ export function CombatScreen({ view, visualOnly = false }: { view: any; visualOn
         {bubbles.map((b) => <SpeechBubble key={'b' + b.id} b={b} s={b.c ? slots.get(b.c) : undefined} />)}
       </div>
       {!visualOnly && <CardLayer root={view.CombatVfxContainer} />}
+      </>}
       <div class="card-fx-host" ref={fxHost} />
-      {pcs && !visualOnly && (
+      {visible && pcs && !visualOnly && (
         <div class="combat-ui">
           <PileButton kind="draw" pile={pcs.DrawPile} me={me} out={!cm.IsInProgress || !!ui.gameOver} />
           <PileButton kind="discard" pile={pcs.DiscardPile} me={me} out={!cm.IsInProgress || !!ui.gameOver} />
@@ -116,9 +128,9 @@ export function CombatScreen({ view, visualOnly = false }: { view: any; visualOn
           <SelectConfirmButton hand={view.Ui.Hand} />
         </div>
       )}
-      {!visualOnly && <CombatBanners />}
-      <TargetingArrow />
-      <TintFilters />
+      {visible && !visualOnly && <CombatBanners />}
+      {visible && <TargetingArrow />}
+      {visible && <TintFilters />}
     </div>
   );
 }

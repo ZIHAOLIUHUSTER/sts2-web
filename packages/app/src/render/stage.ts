@@ -3,7 +3,7 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture, Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { A, skelSrc, spineIndex } from '../assets';
-import { loadScene, attachCreatureFx, particleItem, buildScene, sceneTexture } from './scene';
+import { loadScene, attachCreatureFx, particleItem, buildScene, sceneTexture, sceneReady } from './scene';
 import { curveAt } from './cardfx';
 import { orbCentre, type OrbManagerView } from '../ui/orbs';
 import { loadShader, QuadBatch, animate } from './canvas';
@@ -273,7 +273,7 @@ function loadSpine(key: string, e: any): Promise<boolean> {
   return p;
 }
 
-interface Actor { root: Container; spine?: Spine; key: string; lastAnimCount: number; dead: boolean; idle?: string; hue?: number; dieEnd?: number; death?: { at: number; phase: 'wait' | 'fade' }; animator?: any }
+interface Actor { ready?: Promise<void>; root: Container; spine?: Spine; key: string; lastAnimCount: number; dead: boolean; idle?: string; hue?: number; dieEnd?: number; death?: { at: number; phase: 'wait' | 'fade' }; animator?: any }
 
 /**
  * MegaSprite / MegaAnimationState / MegaTrackEntry over a Pixi Spine: what CreatureAnimator (the model's
@@ -357,6 +357,17 @@ export class CombatStage {
     el.appendChild(a.canvas);
     a.ticker.add(this.tick);
   }
+  /** Initial scene resources and a warm frame before the combat becomes interactive. */
+  async ready(background: Promise<Container | null>) {
+    const bg = await background;
+    this.setBackground(bg);
+    if (this.dead) return;
+    this.sync();
+    await Promise.all([...this.actors.values()].map((actor) => actor.ready));
+    if (this.dead) return;
+    await sceneReady(this.root);
+    if (!this.dead && app?.canvas.isConnected && !document.hidden) app.render();
+  }
   unmount() {
     app?.ticker.remove(this.tick);
     if (activeStage === this) activeStage = null;
@@ -406,7 +417,7 @@ export class CombatStage {
         a = { root: new Container(), key: visualsKey(c), lastAnimCount: 0, dead: false };
         this.actors.set(c, a);
         this.root.addChild(a.root);
-        this.spawn(c, a);
+        a.ready = this.spawn(c, a).catch((error) => { console.warn('creature visual', a!.key, error); });
       }
       // NCreature.AnimShake (a debuff): Visuals.x = 10·sin(4t)·sin(t/2), t = 2π·CubicOut(τ) over 1 s, not during "hurt"
       const shakeAt = (this.view.creatures.get(c) as any)?.shakeAt ?? 0, tau = (performance.now() - shakeAt) / 1000;
@@ -566,38 +577,37 @@ export class CombatStage {
     });
     return d * 1000;
   }
-  private spawn(c: any, a: Actor) {
+  private async spawn(c: any, a: Actor) {
     const e = spineIndex[a.key];
     if (!e?.spine) {
       // sprite-only creatures (doors, the Crusher…): the scene is the body; a placeholder only if it was not converted
-      loadScene(a.key).then((s) => {
-        if (a.root.destroyed) return;
-        if (s) attachCreatureFx(a.root, s, null);
-        else a.root.addChild(new Graphics().roundRect(-90, -220, 180, 220, 24).fill({ color: c.IsPlayer ? 0x6b2a2a : 0x3a4a3a, alpha: 0.85 }));
-      });
+      const s = await loadScene(a.key);
+      if (a.root.destroyed) return;
+      if (s) attachCreatureFx(a.root, s, null);
+      else a.root.addChild(new Graphics().roundRect(-90, -220, 180, 220, 24).fill({ color: c.IsPlayer ? 0x6b2a2a : 0x3a4a3a, alpha: 0.85 }));
       return;
     }
-    loadSpine(a.key, e).then((ok) => {
-      if (!ok || a.root.destroyed) return;
-      const sp = Spine.from({ skeleton: a.key + ':skel', atlas: a.key + ':atlas', scale: 1 });
-      sp.x = e.pos?.[0] ?? 0;
-      sp.y = e.pos?.[1] ?? 0;
-      const flip = !c.IsPlayer && false;
-      sp.scale.set((e.scale?.[0] ?? 1) * (flip ? -1 : 1), e.scale?.[1] ?? 1);
-      try { if (e.skin && sp.skeleton.data.findSkin(e.skin)) sp.skeleton.setSkinByName(e.skin); } catch { /* default skin */ }
-      sp.state.data.defaultMix = e.spine.mix ?? 0.1;
-      const names = sp.skeleton.data.animations.map((x: any) => x.name);
-      a.idle = pick(names, ['idle_loop', 'idle', 'Idle', 'loop']) ?? names[0];
-      if (a.idle) sp.state.setAnimation(0, a.idle, true);
-      // NCreature._spineAnimator: the model's own animation graph (MonsterModel / CharacterModel.GenerateAnimator)
-      try {
-        const model = c.Monster ?? c.Player?.Character;
-        a.animator = model?.GenerateAnimator?.(megaSprite(sp, a.key)) ?? undefined;
-      } catch (e) { console.warn('animator', a.key, e); a.animator = undefined; }
-      a.spine = sp;
-      a.root.addChild(sp);
-      loadScene(a.key).then((s) => { if (s && !sp.destroyed) attachCreatureFx(a.root, s, sp); });
-    });
+    const ok = await loadSpine(a.key, e);
+    if (!ok || a.root.destroyed) return;
+    const sp = Spine.from({ skeleton: a.key + ':skel', atlas: a.key + ':atlas', scale: 1 });
+    sp.x = e.pos?.[0] ?? 0;
+    sp.y = e.pos?.[1] ?? 0;
+    const flip = !c.IsPlayer && false;
+    sp.scale.set((e.scale?.[0] ?? 1) * (flip ? -1 : 1), e.scale?.[1] ?? 1);
+    try { if (e.skin && sp.skeleton.data.findSkin(e.skin)) sp.skeleton.setSkinByName(e.skin); } catch { /* default skin */ }
+    sp.state.data.defaultMix = e.spine.mix ?? 0.1;
+    const names = sp.skeleton.data.animations.map((x: any) => x.name);
+    a.idle = pick(names, ['idle_loop', 'idle', 'Idle', 'loop']) ?? names[0];
+    if (a.idle) sp.state.setAnimation(0, a.idle, true);
+    // NCreature._spineAnimator: the model's own animation graph (MonsterModel / CharacterModel.GenerateAnimator)
+    try {
+      const model = c.Monster ?? c.Player?.Character;
+      a.animator = model?.GenerateAnimator?.(megaSprite(sp, a.key)) ?? undefined;
+    } catch (e) { console.warn('animator', a.key, e); a.animator = undefined; }
+    a.spine = sp;
+    a.root.addChild(sp);
+    const scene = await loadScene(a.key);
+    if (scene && !sp.destroyed) attachCreatureFx(a.root, scene, sp);
   }
   private trigger(a: Actor, trigger: string) {
     const sp = a.spine!;

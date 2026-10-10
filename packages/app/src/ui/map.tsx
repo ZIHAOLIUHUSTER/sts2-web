@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Application, Assets, ColorMatrixFilter, Container } from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { G, $, N, list } from '../game';
-import { ui, invalidate } from '../store';
+import { ui, invalidate, hideOverlays, showOverlays } from '../store';
 import { A, frameByName, frameStyle, imageUrl, skelSrc, maskStyle } from '../assets';
 import { playOneShot } from '../audio';
 import { loc, locv } from '../i18n';
@@ -232,6 +232,7 @@ function hide() {
 }
 /** NOverlayStack hides / shows the overlays and NMerchantRoom swaps its music track on Opened / Closed. */
 function signalOpenedClosed() {
+  if (S.isOpen) hideOverlays(); else showOverlays();
   if (ui.room?.kind === 'shop') safe(() => G.NRunMusicController?.Instance?.ToggleMerchantTrack?.(), undefined);
 }
 export const isMapVisible = () => S.visible;
