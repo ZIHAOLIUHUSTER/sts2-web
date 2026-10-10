@@ -128,6 +128,8 @@ packages/wiki   资料站：构建时无头启动规则层，生成 /wiki/ 下�
 - Android 动画验收要检查实际 trackTime / 骨骼矩阵，不以源码存在代替启用；卡牌 focus / drag / cancel 只改目标姿态，重挂节点保留屏幕姿态。
 - 区分逐帧动作跳变与长帧；复用光效像素缓冲，战后回收表现节点，转场遮罩必须覆盖提示层，勿调整规则结算顺序。
 
+- 战斗动效按状态边逐项验收；成功出牌的跨容器姿态、资源 ready 与退出后卸载尤其易漏，盘点见 `docs/combat-animation-audit.md`。
+
 ## 提交
 
 提交信息用 Conventional Commits，scope 沿用现有的 `app` / `core` / `tools` / `assets`，例如 `fix(app): …`。
