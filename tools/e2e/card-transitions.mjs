@@ -10,7 +10,7 @@ try {
   await page.goto(url);
   const result = await page.evaluate(async () => {
     const { G, $, N } = await import('/src/game.ts');
-    const { HandView, CardNodeView, ContainerNode, ShuffleFlyVfx } = await import('/src/cardnodes.ts');
+    const { HandView, CardNodeView, ContainerNode, ShuffleFlyVfx, CardFlyVfx, CardFlyPowerVfx } = await import('/src/cardnodes.ts');
     const roomClass = N('Rooms.NCombatRoom'), oldRoom = roomClass.Instance, oldCm = G.CombatManager.Instance;
     const gameClass = N('NGame'), oldMainThread = gameClass.IsMainThread;
     gameClass.IsMainThread = () => true;
@@ -18,7 +18,7 @@ try {
     const hand = new HandView(), play = new ContainerNode(23, 14), queue = new ContainerNode(-18, 10);
     const callbacks = [];
     queue.RemoveCardFromQueueForExecution = () => callbacks.push('queue-remove');
-    roomClass.Instance = { Ui: { Hand: hand, PlayQueue: queue, PlayContainer: play } };
+    roomClass.Instance = { Ui: { Hand: hand, PlayQueue: queue, PlayContainer: play }, GetCreatureNode: () => null };
     const vector = (x, y) => new $.Vector2(x, y);
     const model = () => ({ CanPlay$0: () => false });
     const difference = (a, b) => Math.max(...Object.keys(a).map(key => Math.abs(a[key] - b[key])));
@@ -74,8 +74,28 @@ try {
       const vfxRoot = new ContainerNode(); vfxRoot.AddChild(silhouette);
       for (let i = 0; i < 100 && firstShrink === null; i++) await wait(25);
       silhouette.QueueFree(); ShuffleFlyVfx.all.delete(silhouette);
+      // Drive the actual VFX frame callbacks deterministically, including their asynchronous frame waits.
+      let advance;
+      $.setFrameDriver(callback => { advance = callback; return () => {}; });
+      const step = async dt => { advance(dt); await Promise.resolve(); await Promise.resolve(); };
+      const discardCard = new CardNodeView(model());
+      discardCard.Body.Scale = vector(1.06, 1.04);
+      const discard = new CardFlyVfx(discardCard, vector(1800, 900), false, 'ironclad');
+      discard.$entered();
+      await step(.001);
+      const discardFirstScale = { x: discardCard.Body.Scale.X, y: discardCard.Body.Scale.Y };
+      discardCard.QueueFree();
+      const powerCard = new CardNodeView({ Owner: { Creature: {}, Character: { TrailPath: 'ironclad' } } });
+      const power = new CardFlyPowerVfx(powerCard);
+      power.curve = { total: 300, sample: () => ({ x: 0, y: 0, rot: 0 }) };
+      let finishTrail;
+      power.trail = { track() {}, FadeOut: () => new Promise(resolve => { finishTrail = resolve; }) };
+      const powerTask = power.PlayAnim(), powerScales = [];
+      for (let i = 0; i < 50; i++) { await step(.01); powerScales.push(powerCard.Scale.X); }
+      finishTrail(); await powerTask;
+      $.setFrameDriver(null);
       for (const trail of (await import('/src/cardnodes.ts')).TrailVfx.all) trail.free();
-      return { manual, queued, returned, selection, callbacks, costPulse, replayPulse, firstShrink };
+      return { manual, queued, returned, selection, callbacks, costPulse, replayPulse, firstShrink, discardFirstScale, powerScales };
     } finally { hand.QueueFree(); play.QueueFree(); queue.QueueFree(); roomClass.Instance = oldRoom; G.CombatManager.Instance = oldCm; gameClass.IsMainThread = oldMainThread; }
   });
   console.log(JSON.stringify(result, null, 2));
@@ -89,4 +109,9 @@ try {
   for (const pulse of [result.costPulse, result.replayPulse]) { assert(pulse.peak > 1.01); assert.equal(pulse.end, 1); }
   assert(result.replayPulse.nonBlocking, 'feedback must not change rule timing');
   assert(result.firstShrink && result.firstShrink.from === 1 && result.firstShrink.to > .6, 'shuffle phase must not snap 1→0.1');
+  assert(result.discardFirstScale.x > 1.05 && result.discardFirstScale.y > 1.03, 'discard must continue the visible feedback scale');
+  assert.equal(result.powerScales.at(-1), 0, 'completed power shrink must remain zero during its trail fade');
+  assert(result.powerScales.every((scale, i, all) => i === 0 || scale <= all[i - 1] + 1e-8), 'short power flights must not rebound from competing scale tweens');
+  const finalShrink = result.powerScales.findIndex(scale => scale === 0);
+  assert(finalShrink > 0 && Math.abs(result.powerScales[finalShrink - 1] - .1) < 1e-6, 'short power flights must reach .1 before their final shrink, rather than pop from a large card');
 } finally { await browser.close(); }

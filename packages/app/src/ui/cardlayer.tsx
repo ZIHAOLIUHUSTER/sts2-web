@@ -2,7 +2,7 @@
 // queue and container, cards on the Ui root and in CombatVfxContainer — with their NCardHighlight glow; the targeting
 // arrow (NTargetingArrow); and the pointer plumbing NMouseCardPlay / NTargetManager listen to.
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { G, $ } from '../game';
 import { imageUrl } from '../assets';
 import { Card } from './card';
@@ -58,47 +58,52 @@ export function CardLayer({ root, hand, skip }: { root: any; hand?: HandView | n
   const entries = collect(root, skip);
   const live = useRef(entries);
   live.current = entries;
-  useEffect(() => {
-    let frame = 0;
-    return $.onFrame(() => {
-      frame++;
-      const time = performance.now() / 1000;
-      live.current.forEach((e, order) => {
-        const el = els.current.get(keyOf(e));
-        if (!el) return;
-        if (e.slot) { el.style.zIndex = String(e.z * 1000 + order); return; }
-        const n = e.node, h = e.holder;
-        const outer = h ? h.xf() : n.xf();
-        el.style.transform = css(outer);
-        el.style.zIndex = String(e.z * 1000 + order);
-        if (el.style.filter !== n.cssFilter) el.style.filter = n.cssFilter;
-        const body = el.children[1] as HTMLElement;
-        const bs = n.Body.Scale;
-        body.style.transform = h
-          ? `translate(${n.Position.X}px, ${n.Position.Y}px) rotate(${n.Rotation}rad) scale(${n.Scale.X * bs.X}, ${n.Scale.Y * bs.Y})`
-          : `scale(${bs.X}, ${bs.Y})`;
-        const m = n.modulate(), bm = n.Body.Modulate;
-        el.style.opacity = String(Math.max(0, Math.min(1, m[3] * bm.A)));
-        const b = m[0] * bm.R;
-        body.style.filter = b < 0.999 ? `brightness(${b})` : '';
-        // NCardHighlight
-        const cv = body.children[0] as HTMLCanvasElement;
+  // Reparenting mounts fresh DOM in another CardLayer. Paint its complete pose before
+  // the browser can composite an unpositioned card at (0, 0), even while hit-stop is active.
+  const paint = (frame: number, poseOnly = false) => {
+    const time = performance.now() / 1000;
+    live.current.forEach((e, order) => {
+      const el = els.current.get(keyOf(e));
+      if (!el) return;
+      if (e.slot) { el.style.zIndex = String(e.z * 1000 + order); return; }
+      const n = e.node, h = e.holder;
+      const outer = h ? h.xf() : n.xf();
+      el.style.transform = css(outer);
+      el.style.zIndex = String(e.z * 1000 + order);
+      if (el.style.filter !== n.cssFilter) el.style.filter = n.cssFilter;
+      const body = el.children[1] as HTMLElement;
+      const bs = n.Body.Scale;
+      body.style.transform = h
+        ? `translate(${n.Position.X}px, ${n.Position.Y}px) rotate(${n.Rotation}rad) scale(${n.Scale.X * bs.X}, ${n.Scale.Y * bs.Y})`
+        : `scale(${bs.X}, ${bs.Y})`;
+      const m = n.modulate(), bm = n.Body.Modulate;
+      el.style.opacity = String(Math.max(0, Math.min(1, m[3] * bm.A)));
+      const b = m[0] * bm.R;
+      body.style.filter = b < 0.999 ? `brightness(${b})` : '';
+      // NCardHighlight
+      const cv = body.children[0] as HTMLCanvasElement;
+      if (!poseOnly) {
         const img = highlightImage(n.CardHighlight.width, n.CardHighlight.color, frame, time);
         cv.style.display = img ? '' : 'none';
         if (img) { const g = cv.getContext('2d')!; g.clearRect(0, 0, 256, 256); g.drawImage(img, 0, 0); }
-        // holder Flash + index label
-        const flash = el.children[0] as HTMLElement;
-        if (h instanceof HolderView && h.flash.a > 0) { flash.style.display = ''; flash.style.opacity = String(h.flash.a); flash.style.filter = `url(#tint-${h.flash.color.join('-').replace(/\./g, '_')})`; }
-        else flash.style.display = 'none';
-        const idx = el.children[2] as HTMLElement;
-        const showIdx = h instanceof HolderView && h.indexLabel > 0 && showIndices();
-        idx.style.display = showIdx ? '' : 'none';
-        if (showIdx) idx.textContent = String((h as HolderView).indexLabel % 10);
-        // NHandCardHolder hitbox: live once it is near its slot, ignored while a card is dragged or targeted
-        const hit = !!h && !!hand && ((h instanceof HolderView && h.$parent === hand.CardHolderContainer && h.hitboxEnabled) || h instanceof SelectedHolderView) && !hand.dragging && !targetManager.IsInSelection;
-        el.style.pointerEvents = hit ? 'auto' : 'none';
-      });
+      }
+      // holder Flash + index label
+      const flash = el.children[0] as HTMLElement;
+      if (h instanceof HolderView && h.flash.a > 0) { flash.style.display = ''; flash.style.opacity = String(h.flash.a); flash.style.filter = `url(#tint-${h.flash.color.join('-').replace(/\./g, '_')})`; }
+      else flash.style.display = 'none';
+      const idx = el.children[2] as HTMLElement;
+      const showIdx = h instanceof HolderView && h.indexLabel > 0 && showIndices();
+      idx.style.display = showIdx ? '' : 'none';
+      if (showIdx) idx.textContent = String((h as HolderView).indexLabel % 10);
+      // NHandCardHolder hitbox: live once it is near its slot, ignored while a card is dragged or targeted
+      const hit = !!h && !!hand && ((h instanceof HolderView && h.$parent === hand.CardHolderContainer && h.hitboxEnabled) || h instanceof SelectedHolderView) && !hand.dragging && !targetManager.IsInSelection;
+      el.style.pointerEvents = hit ? 'auto' : 'none';
     });
+  };
+  useLayoutEffect(() => { paint(0, true); });
+  useEffect(() => {
+    let frame = 0;
+    return $.onFrame(() => paint(++frame));
   }, [root, hand]);
   return (
     <div class="card-layer">

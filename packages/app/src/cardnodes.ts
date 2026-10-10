@@ -1418,7 +1418,7 @@ export class CardFlyVfx extends Web(NCardFlyVfx) {
   constructor(private card: CardNodeView, private end: any, private adding: boolean, private trailPath: string) { super(); }
   $entered() {
     if (this.trail) return;
-    const card = this.card, start = card.GlobalPosition;
+    const card = this.card, start = card.GlobalPosition, bodyScale = card.Body.Scale;
     card.StopFeedback(); card.StopPoseTween();
     this.trail = new TrailVfx(card, trailOf(this.trailPath));
     const arc = this.end.Y < 540 ? -500 : 500 + rand(100, 400);
@@ -1439,7 +1439,7 @@ export class CardFlyVfx extends Web(NCardFlyVfx) {
           card.Rotation = lerpAngle(card.Rotation, want, k(dt, 12));
           const f = Math.min(Math.max((time * 3) / dur, 0), 1);
           card.Body.Modulate = new $.Color(1 - f, 1 - f, 1 - f, 1);
-          card.Body.Scale = v2(lerp(1, 0.1, f), lerp(1, 0.1, f));
+          card.Body.Scale = v2(lerp(bodyScale.X, 0.1, f), lerp(bodyScale.Y, 0.1, f));
           this.trail?.track();
           return;
         }
@@ -1656,18 +1656,25 @@ export class CardFlyPowerVfx extends Web(NCardFlyPowerVfx) {
   async PlayAnim() {
     const card = this.CardNode, dur = this.curve.total / 3000;
     card.StopFeedback(); card.StopPoseTween();
-    tween().TweenProperty(card, 'scale', v2(0.1, 0.1), 0.3);
+    const scaleTween = tween();
+    scaleTween.TweenProperty(card, 'scale', v2(0.1, 0.1), Math.min(0.3, dur * 0.9));
     let acc = 0, shrinking = false;
     while (acc < dur) {
       const dt = await frame();
-      if (this.$freed) break;
+      if (this.$freed || card.$freed) { scaleTween.Kill(); break; }
       acc += dt;
       const n = acc / dur, s = this.curve.sample(n * n * this.curve.total);
       card.GlobalPosition = v2(this.Position.X + s.x, this.Position.Y + s.y);
       const d = s.rot - card.Rotation, max = lerp(Math.PI, Math.PI * 50, n) * dt;
       card.Rotation += Math.sign(d) * Math.min(Math.abs(d), max);
       this.trail?.track();
-      if (n >= 0.9 && !shrinking) { shrinking = true; tween().TweenProperty(card, 'scale', v2(0, 0), Math.max(0.01, dur - acc)); }
+      if (n >= 0.9 && !shrinking) {
+        shrinking = true;
+        // A short flight reaches this phase before the initial .3s shrink completes.
+        // Continue from its visible size with one writer, rather than two competing tweens.
+        scaleTween.Kill();
+        tween().TweenProperty(card, 'scale', v2(0, 0), Math.max(0.01, dur - acc));
+      }
     }
     safe(() => N('NGame').Instance?.ScreenShake?.(G.ShakeStrength.Medium, G.ShakeDuration.Short), null);
     if (this.trail) await this.trail.FadeOut();
